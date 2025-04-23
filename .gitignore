@@ -1,0 +1,9 @@
+# ROS 2 生成文件
+build/
+install/
+log/
+.vscode/
+core/
+.cursor/
+poses.csv/
+image_data/
