@@ -14,6 +14,7 @@ import time
 import numpy as np
 
 import json
+from ultralytics import YOLO
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 
@@ -41,36 +42,46 @@ Please output the result using the following JSON structure:
     }
 }
 '''
-
+import os
+os.environ["QT_QPA_PLATFORM"] = "xcb"
 from common_interface.msg import RectDepth
 class DetectVLNode(Node):
-    
+
     def __init__(self):
         super().__init__('detect_vl_node')
         self.bridge = CvBridge()
 
         self.rgb_image = None
         self.depth_image = None
-        self.detect_image =None
-
+        self.model = YOLO('yolov8n.pt')#YOLO('src/detect_vl/detect_vl/yolov11n.pt')
         self.start_point = None
         self.end_point = None
 
-        # self.create_subscription(CompressedImage, '/camera/rgb/image_raw', self.rgb_callback, 10)
-        self.create_subscription(Image, '/camera/camera/depth/image_rect_raw', self.depth_callback, 10)
-        self.create_subscription(CompressedImage, '/image_detected', self.yolo_callback, 10)
+        self.create_subscription(CompressedImage, '/camera/camera/color/image_raw/compressed', self.rgb_callback, 10)
+        # self.create_subscription(Image, '/camera/camera/depth/image_rect_raw', self.depth_callback, 10)
+        # self.create_subscription(CompressedImage, '/image_detected', self.yolo_callback, 10)
         self.create_publisher(RectDepth, 'task/rect_depth', 10)
         self.get_logger().info("✅ DetectVL node started, waiting for image...")
 
     def rgb_callback(self, msg):
         try:
             self.rgb_image = self.bridge.compressed_imgmsg_to_cv2(msg, desired_encoding='bgr8')
-            # show img
-            cv2.rectangle(self.rgb_image, self.start_point, self.end_point, (255, 0, 0), 2)
-            cv2.imshow("RGB Camera Feed", self.rgb_image)
-            cv2.waitKey(1)  # update the window
+            results = self.model.predict(source=self.rgb_image, imgsz=640, conf=0.3, verbose=False, device='cuda')
+            result = results[0]
+            boxes = result.boxes.xyxy.cpu().numpy()  # 转为numpy数组
+            confs = result.boxes.conf.cpu().numpy()
+            classes = result.boxes.cls.cpu().numpy()
+            
+            for box, conf, cls in zip(boxes, confs, classes):
+                x1, y1, x2, y2 = map(int, box)
+                label = f"{self.model.names[int(cls)]} {conf:.2f}"
+                cv2.rectangle(self.rgb_image, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                cv2.putText(self.rgb_image, label, (x1, y1 - 10),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
+            cv2.imshow("YOLO Detection Feed", self.rgb_image)
+            cv2.waitKey(1)           
         except Exception as e:
-            self.get_logger().error(f"RGB failed to transfer image: {e}")
+            self.get_logger().error(f"图像处理失败: {e}")
     def depth_callback(self, msg):
         try:
             # if format of 16UC1, do not use 'passthrough'
@@ -125,52 +136,90 @@ class DetectVLNode(Node):
             self.get_logger().info(f"📏 Center depth at ({xy[0]},{xy[1]}): {center_depth_m:.3f} m")
             return center_depth_m
     
-
 def main(args=None):
     rclpy.init(args=args)
     node = DetectVLNode()
-
-    # ROS2 spin
-    threading.Thread(target=rclpy.spin, args=(node,), daemon=True).start()
-
-    # main question loops
     try:
-        while True:
-            question = input("\n enter your question(type Ctrl+C exit):\n> ").strip()
-            if not question:
-                print("invalid question")
-                continue
-
-            if node.detect_image is None:
-                print("no frames input, waiting for stream...")
-                continue
-            
-            print("📤 sending to GPT-4o, waiting for response...")
-            try:
-                answer = node.ask_gpt4o_with_image(node.detect_image, question)
-                print(f"\n✅ GPT-4o answer: {answer}")
-                import re
-                clean_str = re.sub(r"```", "", re.sub(r"```json", "", answer).strip()).strip()
-                xy = None
-                # json.loads(re.sub(r"```", "", re.sub(r"```json", "", answer).strip()).strip()).get("xy",None)
-                # json.loads(re.sub(r"```", "", re.sub(r"```json", "", answer).strip(
-                # 解析 JSON
-                data = json.loads(clean_str)
-
-                # 分别提取 object 和 center
-                objects = [item['object'] for item in data['find_in_img']]
-                centers = [item['center'] for item in data['find_in_img']]
-
-                # 目标 target
-                target_object = data['target']['object']
-                target_center = data['target']['center']
-                print(node.get_depth_from_box(target_center))
-
-            except Exception as e:
-                print(f"❌ failed GPT-4o : {e}")
-
+        rclpy.spin(node)
     except KeyboardInterrupt:
-        print("\n🛑 exit.")
+        print("⛔ 退出程序")
     finally:
         node.destroy_node()
         rclpy.shutdown()
+        cv2.destroyAllWindows()
+
+if __name__ == '__main__':
+    main()
+
+
+# def main(args=None):
+#     rclpy.init(args=args)
+#     node = DetectVLNode()
+
+#     # ROS2 spin
+#     threading.Thread(target=rclpy.spin, args=(node,), daemon=True).start()
+#     try:
+#         while True:
+#             # continue
+#             if node.rgb_image is None:
+#                 continue
+#     #         results = node.model.predict(source=node.rgb_image, imgsz=640, conf=0.3, verbose=False, device='cuda')
+
+#     #         # ✅ 取第一个result（因为predict返回的是list）
+#     #         result = results[0]
+#     #         boxes = result.boxes.xyxy.cpu().numpy()  # 转为numpy数组
+#     #         confs = result.boxes.conf.cpu().numpy()
+#     #         classes = result.boxes.cls.cpu().numpy()
+
+#     #         # ✅ 在图像上画框
+#     #         for box, conf, cls in zip(boxes, confs, classes):
+#     #             x1, y1, x2, y2 = map(int, box)
+#     #             label = f"{node.model.names[int(cls)]} {conf:.2f}"
+#     #             cv2.rectangle(node.rgb_image, (x1, y1), (x2, y2), (0, 255, 0), 2)
+#     #             cv2.putText(node.rgb_image, label, (x1, y1 - 10),
+#     #                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
+
+#     #         # ✅ 显示推理后的图像
+#             cv2.imshow("YOLO Detection Feed", node.rgb_image)
+#             cv2.waitKey(10)
+#     # main question loops
+#     # try:
+#     #     while True:
+#     #         question = input("\n enter your question(type Ctrl+C exit):\n> ").strip()
+#     #         if not question:
+#     #             print("invalid question")
+#     #             continue
+
+#     #         if node.detect_image is None:
+#     #             print("no frames input, waiting for stream...")
+#     #             continue
+            
+#     #         print("📤 sending to GPT-4o, waiting for response...")
+#     #         try:
+#     #             answer = node.ask_gpt4o_with_image(node.detect_image, question)
+#     #             print(f"\n✅ GPT-4o answer: {answer}")
+#     #             import re
+#     #             clean_str = re.sub(r"```", "", re.sub(r"```json", "", answer).strip()).strip()
+#     #             xy = None
+#     #             # json.loads(re.sub(r"```", "", re.sub(r"```json", "", answer).strip()).strip()).get("xy",None)
+#     #             # json.loads(re.sub(r"```", "", re.sub(r"```json", "", answer).strip(
+#     #             # 解析 JSON
+#     #             data = json.loads(clean_str)
+
+#     #             # 分别提取 object 和 center
+#     #             objects = [item['object'] for item in data['find_in_img']]
+#     #             centers = [item['center'] for item in data['find_in_img']]
+
+#     #             # 目标 target
+#     #             target_object = data['target']['object']
+#     #             target_centsite-packages/detect_vl/run_detect.py", line 197, in main
+#     # rclpy.shutdown()
+#     except Exception as e:
+#         print(f"❌ failed GPT-4o : {e}")
+
+#     # except KeyboardInterrupt:site-packages/detect_vl/run_detect.py", line 197, in main
+#         rclpy.shutdown()
+#         print("\n🛑 exit.")
+#     finally:
+#         node.destroy_node()
+#         rclpy.shutdown()
