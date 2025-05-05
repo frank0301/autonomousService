@@ -17,7 +17,6 @@ import json
 from ultralytics import YOLO
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-
 SYSTEM_PROMPT_WORD='''
 You are an advanced multimodal assistant integrated into a mobile robot. 
 I'm about to give a cmd to the robot to reach a pleace.
@@ -46,7 +45,6 @@ import os
 os.environ["QT_QPA_PLATFORM"] = "xcb"
 from common_interface.msg import RectDepth
 class DetectVLNode(Node):
-
     def __init__(self):
         super().__init__('detect_vl_node')
         self.bridge = CvBridge()
@@ -58,8 +56,8 @@ class DetectVLNode(Node):
         self.end_point = None
 
         self.create_subscription(CompressedImage, '/camera/camera/color/image_raw/compressed', self.rgb_callback, 10)
-        # self.create_subscription(Image, '/camera/camera/depth/image_rect_raw', self.depth_callback, 10)
-        # self.create_subscription(CompressedImage, '/image_detected', self.yolo_callback, 10)
+        self.create_subscription(Image, '/camera/camera/depth/image_rect_raw', self.depth_callback, 10)
+        # self.create_subscription(CompressedImage, '/camera/camera/depth/image_rect_raw/compressed', self.yolo_callback, 10)
         self.create_publisher(RectDepth, 'task/rect_depth', 10)
         self.get_logger().info("✅ DetectVL node started, waiting for image...")
 
@@ -82,6 +80,7 @@ class DetectVLNode(Node):
             cv2.waitKey(1)           
         except Exception as e:
             self.get_logger().error(f"图像处理失败: {e}")
+
     def depth_callback(self, msg):
         try:
             # if format of 16UC1, do not use 'passthrough'
@@ -99,6 +98,7 @@ class DetectVLNode(Node):
             cv2.waitKey(1)  # update the window
         except Exception as e:
             self.get_logger().error(f"RGB failed to transfer image: {e}")
+            
     def ask_gpt4o_with_image(self, cv2_img, question):
         cv2.imwrite("detect_img.jpg",cv2_img)
         pil_img = PILImage.fromarray(cv2_img)
@@ -135,7 +135,7 @@ class DetectVLNode(Node):
 
             self.get_logger().info(f"📏 Center depth at ({xy[0]},{xy[1]}): {center_depth_m:.3f} m")
             return center_depth_m
-    
+
 def main(args=None):
     rclpy.init(args=args)
     node = DetectVLNode()
