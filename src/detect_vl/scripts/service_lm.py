@@ -16,6 +16,7 @@ First, extract static objects; for each object, set its corresponding action as 
 Then, extract simple movement actions (like "turn left", "turn right"); for each action, set its corresponding object as null
 The objects and actions lists must be of the same length, aligning each object or action step by step.
 For "turn" actions, describe them using angles. left use "-90", right use "90"
+If both object and action are "null" at the same step, do not include that step.
 I'm going to give you an example first: "go to the chair, then go out the door, and turn right."
 Please output the result using the following JSON structure:
 {

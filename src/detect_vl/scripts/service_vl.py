@@ -29,6 +29,7 @@ class GroundingDINOInfer:
         )
 
         image_cv = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+        print(results)
         boxes = results[0]['boxes'].cpu().numpy()
         labels = results[0]['labels']
         scores = results[0]['scores'].cpu().numpy()

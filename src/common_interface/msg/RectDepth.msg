@@ -1,6 +1,6 @@
 std_msgs/Int32MultiArray rect
-int64 frame
-int64 center
-int64 depth
-std_msgs/Int32MultiArray coordinate_diff
+std_msgs/Int32MultiArray center
+float32 frame
+float32 depth
+std_msgs/Float32MultiArray coordinate_diff
 float32 theta

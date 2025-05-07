@@ -14,8 +14,10 @@ this node func:
 
 import rclpy
 from rclpy.node import Node
-from sensor_msgs.msg import Image
-from sensor_msgs.msg import CompressedImage
+
+from sensor_msgs.msg import Image,CompressedImage
+from std_msgs.msg import Int32MultiArray,Float32MultiArray
+
 from cv_bridge import CvBridge
 import cv2
 
@@ -38,8 +40,8 @@ class ServiceNode(Node):
         self.rgb_image = None
         self.depth_image = None
 
-        self.start_point = None
-        self.end_point = None
+        self.rect = None
+        
 
         self.obj_list=None
         self.act_list=None
@@ -47,7 +49,8 @@ class ServiceNode(Node):
         self.VL = GroundingDINOInfer()
 
         self.create_subscription(CompressedImage, '/camera/camera/color/image_raw/compressed', self.rgb_callback, 10)
-        self.create_subscription(CompressedImage, '/camera/camera/depth/image_raw/compressed', self.depth_callback, 10)
+        # self.create_subscription(CompressedImage, '/camera/camera/depth/image_rect_raw/compressed', self.depth_callback, 10)
+        self.create_subscription(Image, '/camera/camera/depth/image_rect_raw', self.depth_callback, 10)
         # self.create_subscription()
         self.target_pub = self.create_publisher(RectDepth, 'task/rect_depth', 10)
         self.get_logger().info("ServiceNode node started, waiting for image...")
@@ -55,22 +58,32 @@ class ServiceNode(Node):
     def rgb_callback(self, msg):
         try:
             self.rgb_image = self.bridge.compressed_imgmsg_to_cv2(msg, desired_encoding='bgr8')
-            
+            if not self.rect is None:
+                cv2.rectangle(self.rgb_image, self.rect, (0, 0, 255), 2)
+            cv2.imshow("rs_img", self.rgb_image)
+            cv2.waitKey(1)
         except Exception as e:
             self.get_logger().error(f"图像处理失败: {e}")
 
     def depth_callback(self, msg):
         try:
             # if format of 16UC1, do not use 'passthrough'
-            self.depth_image = self.bridge.compressed_imgmsg_to_cv2(msg, desired_encoding='passthrough')
+            self.depth_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='passthrough')
+            # 假设 depth_image 是 16位 或 32位 float，需要先归一化
+            depth_normalized = cv2.normalize(self.depth_image, None, 0, 255, cv2.NORM_MINMAX)
+            depth_normalized = np.uint8(depth_normalized)  # 转成 8位
+
+            # 应用伪彩色
+            depth_colored = cv2.applyColorMap(depth_normalized, cv2.COLORMAP_JET)
             cv2.imshow("depth",self.depth_image)
+            cv2.waitKey(1)
         except Exception as e:
             self.get_logger().error(f"Depth image failed to transfer: {e}")
 
     def pix2world(self, pix_xy):
             if self.depth_image is None:
                 self.get_logger().warn("⚠️ Depth image not yet received.")
-                return None
+                return None,None,None
 
             center_depth_mm = self.depth_image[pix_xy[1], pix_xy[0]]  # Access depth image using (row, col)
             center_depth_m = center_depth_mm / 1000.0
@@ -78,10 +91,11 @@ class ServiceNode(Node):
             self.get_logger().info(f"📏 Center depth at ({pix_xy[0]},{pix_xy[1]}): {center_depth_m:.3f} m")
             cx,cy = 320, 240
             fx,fy = 385, 385
-            wx = (pix_xy - cx) * center_depth_m / fx
-            wy = (pix_xy - cy) * center_depth_m / fy
+            pix_x, pix_y = pix_xy 
+            wY = (pix_x - cx) * center_depth_m / fx
+            wX =  center_depth_m #(pix_y - cy) * center_depth_m / fy
             
-            return center_depth_m,wx,wy
+            return center_depth_m,wX,wY
 
     
 
@@ -111,21 +125,33 @@ def main(args=None):
                 act = node.act_list[idx]
                 msg = RectDepth()
                 if obj and obj.lower() != "null":
-                    img_detect, rect, center = node.VL.infer(node.rgb_image,node.act_list[idx])
+                    img_detect, rect, center = node.VL.infer(node.rgb_image,node.act_list[idx]+".")
+                    node.rect = rect
+                    print(rect," ", center)
                     if rect is None:
                         print("no object found")
                         continue
-                    cv2.imshow("VL-detect", img_detect)
-                    cv2.waitKey(1)
+                    # cv2.imshow("VL-detect", img_detect)
+                    # cv2.waitKey(1)
                     dis,wx,wy = node.pix2world(center)
-                    if dis < 1:
+                    if dis is None:
+                        continue
+                    print(f"dis={dis},coordinate=({wx},{wy})")
+                    if dis < 0.1:
                         idx += 1
                     else:
-                        msg.rect = rect
-                        msg.center = center
-                        msg.depth = dis
+                        msg.rect = Int32MultiArray()
+                        msg.rect.data = rect
+
+                        msg.center = Int32MultiArray()
+                        msg.center.data = center
+                        
                         msg.frame = time.time()
-                        msg.coordinate_diff = [wx, wy]
+
+                        msg.depth = dis
+                        msg.coordinate_diff = Float32MultiArray()
+                        msg.coordinate_diff.data = [wx, wy]
+                        
                         node.target_pub.publish(msg)
                 elif act and act.lower() != "null":
                     msg.coodinate_diff = [0, 0]
@@ -134,13 +160,11 @@ def main(args=None):
                     print("waiting turning")
                     idx += 1
                     time.sleep(5)
-
+                
                 else:
-                    print("wrong cmd-act and obj is None")
-            
-            
-
-                    
+                    node.get_logger().warn("both null, jump over it!")
+                    idx+=1
+            node.get_logger().info("success!")
     except KeyboardInterrupt:
         print("⛔ 退出程序")
     finally:
