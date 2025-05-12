@@ -4,18 +4,19 @@ from transformers import AutoProcessor, AutoModelForZeroShotObjectDetection
 import numpy as np
 import cv2
 
-_MODEL_ID = "IDEA-Research/grounding-dino-base"
+_MODEL_ID = "IDEA-Research/grounding-dino-tiny"
 class GroundingDINOInfer:
     def __init__(self, model_id=_MODEL_ID, device=None):
         self.device = device if device else ("cuda" if torch.cuda.is_available() else "cpu")
+        print(self.device)
         self.processor = AutoProcessor.from_pretrained(model_id)
         self.model = AutoModelForZeroShotObjectDetection.from_pretrained(model_id).to(self.device)
 
     def infer(self, img, task):
-        # image_resize = cv2.resize(img, (image_cv.shape[1] // 2, image_cv.shape[0] // 2))
+        # image_resize= cv2.resize(img, (img.shape[1] // 2, img.shape[0] // 2))
         image_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         image = Image.fromarray(image_rgb)
-
+        print(task)
         inputs = self.processor(images=image, text=task, return_tensors="pt").to(self.device)
         with torch.no_grad():
             outputs = self.model(**inputs)
@@ -29,7 +30,7 @@ class GroundingDINOInfer:
         )
 
         image_cv = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
-        print(results)
+        # print(results)
         boxes = results[0]['boxes'].cpu().numpy()
         labels = results[0]['labels']
         scores = results[0]['scores'].cpu().numpy()

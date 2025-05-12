@@ -48,9 +48,9 @@ class ServiceNode(Node):
 
         self.VL = GroundingDINOInfer()
 
-        self.create_subscription(CompressedImage, '/camera/camera/color/image_raw/compressed', self.rgb_callback, 10)
+        self.create_subscription(CompressedImage, '/camera/camera/color/image_raw/compressed', self.rgb_callback, 30)
         # self.create_subscription(CompressedImage, '/camera/camera/depth/image_rect_raw/compressed', self.depth_callback, 10)
-        self.create_subscription(Image, '/camera/camera/depth/image_rect_raw', self.depth_callback, 10)
+        self.create_subscription(Image, '/camera/camera/depth/image_rect_raw', self.depth_callback, 30)
         # self.create_subscription()
         self.target_pub = self.create_publisher(RectDepth, 'task/rect_depth', 10)
         self.get_logger().info("ServiceNode node started, waiting for image...")
@@ -58,10 +58,8 @@ class ServiceNode(Node):
     def rgb_callback(self, msg):
         try:
             self.rgb_image = self.bridge.compressed_imgmsg_to_cv2(msg, desired_encoding='bgr8')
-            if not self.rect is None:
-                cv2.rectangle(self.rgb_image, self.rect, (0, 0, 255), 2)
-            cv2.imshow("rs_img", self.rgb_image)
-            cv2.waitKey(1)
+            # cv2.imshow("rs_img", self.rgb_image)
+            # cv2.waitKey(100)
         except Exception as e:
             self.get_logger().error(f"图像处理失败: {e}")
 
@@ -74,9 +72,9 @@ class ServiceNode(Node):
             depth_normalized = np.uint8(depth_normalized)  # 转成 8位
 
             # 应用伪彩色
-            depth_colored = cv2.applyColorMap(depth_normalized, cv2.COLORMAP_JET)
-            cv2.imshow("depth",self.depth_image)
-            cv2.waitKey(1)
+            # depth_colored = cv2.applyColorMap(depth_normalized, cv2.COLORMAP_JET)
+            # cv2.imshow("depth",self.depth_image)
+            # cv2.waitKey(1)
         except Exception as e:
             self.get_logger().error(f"Depth image failed to transfer: {e}")
 
@@ -125,14 +123,14 @@ def main(args=None):
                 act = node.act_list[idx]
                 msg = RectDepth()
                 if obj and obj.lower() != "null":
-                    img_detect, rect, center = node.VL.infer(node.rgb_image,node.act_list[idx]+".")
+                    img_detect, rect, center = node.VL.infer(node.rgb_image,node.obj_list[idx]+".")
                     node.rect = rect
-                    print(rect," ", center)
+                    # print(rect," ", center)
                     if rect is None:
                         print("no object found")
                         continue
-                    # cv2.imshow("VL-detect", img_detect)
-                    # cv2.waitKey(1)
+                    cv2.imshow("VL-detect", img_detect)
+                    cv2.waitKey(1)
                     dis,wx,wy = node.pix2world(center)
                     if dis is None:
                         continue

@@ -13,7 +13,7 @@ model = AutoModelForZeroShotObjectDetection.from_pretrained(model_id).to(device)
 
 # image_url = "http://images.cocodataset.org/val2017/000000039769.jpg"
 # image = Image.open(requests.get(image_url, stream=True).raw)
-image_cv = cv2.imread("/home/epon/vl_test/imgs/labSen/frame_pic003.jpg")
+image_cv = cv2.imread("/home/epon/vl_test/imgs/image001.jpg")#labSen/frame_pic003.jpg")
 image_resize= cv2.resize(image_cv, (image_cv.shape[1] // 2, image_cv.shape[0] // 2))
 image_rgb = cv2.cvtColor(image_resize, cv2.COLOR_BGR2RGB)
 image = Image.fromarray(image_rgb)

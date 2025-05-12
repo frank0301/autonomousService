@@ -7,3 +7,9 @@ core/
 .cursor/
 poses.csv/
 image_data/
+# model files
+*.pt
+*.png
+*.jpg
+*.jpeg
+
