@@ -47,7 +47,7 @@ class ServiceNode(Node):
         self.act_list=None
 
         self.VL = GroundingDINOInfer()
-
+        time.sleep(10)
         self.create_subscription(CompressedImage, '/camera/camera/color/image_raw/compressed', self.rgb_callback, 30)
         # self.create_subscription(CompressedImage, '/camera/camera/depth/image_rect_raw/compressed', self.depth_callback, 10)
         self.create_subscription(Image, '/camera/camera/depth/image_rect_raw', self.depth_callback, 30)
@@ -87,13 +87,13 @@ class ServiceNode(Node):
             center_depth_m = center_depth_mm / 1000.0
 
             self.get_logger().info(f"📏 Center depth at ({pix_xy[0]},{pix_xy[1]}): {center_depth_m:.3f} m")
-            cx,cy = 320, 240
-            fx,fy = 385, 385
+            cx,cy = 319.47, 247
+            fx,fy = 615.53, 615.53
             pix_x, pix_y = pix_xy 
             wY = (pix_x - cx) * center_depth_m / fx
-            wX =  center_depth_m #(pix_y - cy) * center_depth_m / fy
-            
-            return center_depth_m,wX,wY
+            wX = center_depth_m #(pix_y - cy) * center_depth_m / fy
+            self.get_logger().info(f"wY:{wY},wX:{wX}")
+            return center_depth_m,wX,-wY
 
     
 
@@ -104,26 +104,44 @@ def main(args=None):
     threading.Thread(target=rclpy.spin, args=(node,), daemon=True).start()
     try:
         while True:
-            question = input("\n enter your question(type Ctrl+C exit):\n> ").strip()
-            if not question:
-                print("invalid question")
+            msg = RectDepth()          
+            # msg.frame = time.time()
+
+            # msg.depth = 3.0 #dis
+            # msg.coordinate_diff = Float32MultiArray()
+
+
+            # msg.coordinate_diff.data = [3.0, 0.7]#[wx, wy]
+            
+            # node.target_pub.publish(msg)
+            # time.sleep(3)
+            # continue
+            if node.rgb_image is None:
+                time.sleep(1)
                 continue
-            answer = ans2json.ans2json(lm.ask_gpt_ll(question))
-            print(f"\n✅ GPT-4o answer: \n{answer}")
-            node.act_list, node.obj_list = answer["actions"], answer["objects"]
-            '''
-                    task here: 
-                    pub the goal
-                        <-
-                    detect the obj VLM <- depth img, rect 
-            '''
+            # question = input("\n enter your question(type Ctrl+C exit):\n> ").strip()
+            # if not question:
+            #     print("invalid question")
+            #     continue
+            # answer = ans2json.ans2json(lm.ask_gpt_ll(question))
+            # print(f"\n✅ GPT-4o answer: \n{answer}")
+            # node.act_list, node.obj_list = answer["actions"], answer["objects"]
+            # print(node.act_list, node.obj_list)
+            # '''
+            #         task here: 
+            #         pub the goal
+            #             <-
+            #         detect the obj VLM <- depth img, rect 
+            # '''
+            node.obj_list = ['a blue trash']
+            node.act_list = ['null']
             idx = 0
             while idx < len(node.act_list):
                 obj = node.obj_list[idx]
                 act = node.act_list[idx]
                 msg = RectDepth()
                 if obj and obj.lower() != "null":
-                    img_detect, rect, center = node.VL.infer(node.rgb_image,node.obj_list[idx]+".")
+                    img_detect, rect, center = node.VL.infer(node.rgb_image, node.obj_list[idx]+".")
                     node.rect = rect
                     # print(rect," ", center)
                     if rect is None:
@@ -135,7 +153,9 @@ def main(args=None):
                     if dis is None:
                         continue
                     print(f"dis={dis},coordinate=({wx},{wy})")
-                    if dis < 0.1:
+                    if dis == 0:
+                        continue
+                    if dis < 0.5:
                         idx += 1
                     else:
                         msg.rect = Int32MultiArray()
@@ -146,11 +166,14 @@ def main(args=None):
                         
                         msg.frame = time.time()
 
-                        msg.depth = dis
+                        msg.depth = 3.0 #dis
                         msg.coordinate_diff = Float32MultiArray()
-                        msg.coordinate_diff.data = [wx, wy]
+
+
+                        msg.coordinate_diff.data = [3.0, 0.7]#[wx, wy]
                         
                         node.target_pub.publish(msg)
+                        time.sleep(3)
                 elif act and act.lower() != "null":
                     msg.coodinate_diff = [0, 0]
                     msg.theta = float(act)
