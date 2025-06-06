@@ -31,7 +31,7 @@ import scripts.service_lm as lm
 import scripts.ans2json as ans2json
 import os
 os.environ["QT_QPA_PLATFORM"] = "xcb"
-from common_interface.msg import RectDepth
+from common_interface.msg import RectDepth,Camera2map
 from scripts.memory_builder import MemoryBuilder
 import yaml
 
@@ -55,8 +55,9 @@ class ServiceNode(Node):
         self.current_room = None
         self.room_pose = [0.0, 0.0, 0.0]  # Default pose, should be updated with actual robot pose
         time.sleep(10)
-        self.create_subscription(CompressedImage, '/camera/camera/color/image_raw/compressed', self.rgb_callback, 30)
-        self.create_subscription(Image, '/camera/camera/depth/image_rect_raw', self.depth_callback, 30)
+        self.create_subscription(CompressedImage, '/camera/camera/color/image_raw/compressed', self.rgb_callback, 10)
+        self.create_subscription(Image, '/camera/camera/depth/image_rect_raw', self.depth_callback, 10)
+        self.create_subscription(Camera2map, '/camera2map', self.camera2map_callback, 10)
         # self.create_subscription()
         self.target_pub = self.create_publisher(RectDepth, 'task/rect_depth', 10)
         self.get_logger().info("ServiceNode node started, waiting for image...")
@@ -97,6 +98,17 @@ class ServiceNode(Node):
             yaml.dump(memory_data, f, default_flow_style=False)
             self.get_logger().info(f"Updated memory file with {room_type} features")
 
+    def camera2map_callback(self, msg):
+        """Handle camera to map transformation updates"""
+        try:
+            # Assuming the message contains [x, y, yaw]
+            x, y, yaw = msg.data
+            # Update the camera pose in memory builder
+            self.memory_builder.update_camera_pose(x, y, yaw)
+            self.get_logger().info(f"Updated camera pose: x={x:.2f}, y={y:.2f}, yaw={yaw:.2f}")
+        except Exception as e:
+            self.get_logger().error(f"Error processing camera pose: {e}")
+
     def rgb_callback(self, msg):
         try:
             self.rgb_image = self.bridge.compressed_imgmsg_to_cv2(msg, desired_encoding='bgr8')
@@ -116,7 +128,7 @@ class ServiceNode(Node):
                         img_detect, rect, center = self.VL.infer(self.rgb_image, obj_name + ".")
                         if rect is not None and center is not None:
                             # Calculate world coordinates
-                            dis, wx, wy = self.pix2world(center)
+                            dis, wx, wy = self.pix2camera_frame(center)
                             if dis is not None and dis > 0:
                                 self.get_logger().info(f"Detected {obj_name} at distance {dis:.2f}m, coordinates ({wx:.2f}, {wy:.2f})")
                                 
@@ -163,22 +175,22 @@ class ServiceNode(Node):
         except Exception as e:
             self.get_logger().error(f"Depth image failed to transfer: {e}")
 
-    def pix2world(self, pix_xy):
-            if self.depth_image is None:
-                self.get_logger().warn("⚠️ Depth image not yet received.")
-                return None,None,None
+    def pix2camera_frame(self, pix_xy):
+        if self.depth_image is None:
+            self.get_logger().warn("⚠️ Depth image not yet received.")
+            return None, None, None
 
-            center_depth_mm = self.depth_image[pix_xy[1], pix_xy[0]]  # Access depth image using (row, col)
-            center_depth_m = center_depth_mm / 1000.0
+        center_depth_mm = self.depth_image[pix_xy[1], pix_xy[0]]  # Access depth image using (row, col)
+        center_depth_m = center_depth_mm / 1000.0
 
-            self.get_logger().info(f"📏 Center depth at ({pix_xy[0]},{pix_xy[1]}): {center_depth_m:.3f} m")
-            cx,cy = 319.47, 247
-            fx,fy = 615.53, 615.53
-            pix_x, pix_y = pix_xy 
-            wY = (pix_x - cx) * center_depth_m / fx
-            wX = center_depth_m #(pix_y - cy) * center_depth_m / fy
-            self.get_logger().info(f"wY:{wY},wX:{wX}")
-            return center_depth_m,wX,-wY
+        self.get_logger().info(f"📏 Center depth at ({pix_xy[0]},{pix_xy[1]}): {center_depth_m:.3f} m")
+        cx, cy = 319.47, 247
+        fx, fy = 615.53, 615.53
+        pix_x, pix_y = pix_xy 
+        wY = (pix_x - cx) * center_depth_m / fx
+        wX = center_depth_m 
+        self.get_logger().info(f"wY:{wY},wX:{wX}")
+        return center_depth_m, wX, -wY
 
     
 
@@ -224,7 +236,7 @@ def main(args=None):
                         continue
                     cv2.imshow("VL-detect", img_detect)
                     cv2.waitKey(1)
-                    dis,wx,wy = node.pix2world(center)
+                    dis,wx,wy = node.pix2camera_frame(center)
                     if dis is None:
                         continue
                     print(f"dis={dis},coordinate=({wx},{wy})")
