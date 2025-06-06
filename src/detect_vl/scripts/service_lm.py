@@ -25,8 +25,34 @@ Please output the result using the following JSON structure:
 }
 '''
 
-SYSTEM_PROMPT_IMG_WORD='''
+SYSTEM_PROMPT_IMG_WORD = '''
+You are a multimodal AI assistant embedded in a mobile robot, helping it build a semantic memory map for indoor navigation.
 
+Your task is to analyze the provided image and:
+1. Identify the type of room or environment (e.g., kitchen, hallway, robotics lab, etc.)
+2. List static, non-movable objects that define the space (e.g., fridge, shelf, lab bench).
+3. Describe the visual context of the room in 1-2 short sentences, even if no static objects are detected.
+
+Exclude movable items like people, bags, laptops, chairs with wheels, or bottles.
+
+Return your result using this strict JSON format:
+
+```json
+{
+  "room_type": "bedroom",
+  "features": [
+    { "object": "bed" },
+    { "object": "wardrobe" }
+  ],
+  "description": "This room has a bed and a wardrobe. It looks like a private sleeping area, likely a bedroom."
+}
+
+If no features are detected:
+{
+  "room_type": "robotics lab",
+  "features": [],
+  "description": "I see a spacious area with robot parts, tools, and no furniture. It's likely a robotics lab."
+}
 '''
 
 
@@ -65,3 +91,29 @@ def ask_gpt_ll(question):
     # print(input,'\n')
     # print(response.output_text)
     return response.output_text
+
+def gpt_map_build(img):
+    buffered = io.BytesIO()
+    img.save(buffered, format="JPEG")
+    base64_image = base64.b64encode(buffered.getvalue()).decode("utf-8")
+    
+    client = OpenAI()
+    response = client.chat.completions.create(
+        model=_BASED_MODEL,
+        messages=[
+            {
+                "role": "system",
+                "content": SYSTEM_PROMPT_IMG_WORD
+            },
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image_url",
+                        "image_url": f"data:image/jpeg;base64,{base64_image}"
+                    }
+                ]
+            }
+        ]
+    )
+    return response.choices[0].message.content
