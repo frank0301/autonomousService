@@ -61,6 +61,7 @@ class ServiceNode(Node):
         # self.create_subscription()
         self.target_pub = self.create_publisher(RectDepth, 'task/rect_depth', 10)
         self.get_logger().info("ServiceNode node started, waiting for image...")
+        self.create_subscription(String, '/robot_state',self.robot_state_update_callback, 10)
 
     def save_to_memory(self, room_type, features_with_coords):
         memory_data = {"nodes": []}
@@ -97,6 +98,9 @@ class ServiceNode(Node):
         with open(self.memory_file, 'w') as f:
             yaml.dump(memory_data, f, default_flow_style=False)
             self.get_logger().info(f"Updated memory file with {room_type} features")
+    def robot_state_update_callback(self, msg):
+        self.robot_state = msg.data
+        self.get_logger().info(f"{msg.data}")
 
     def camera2map_callback(self, msg):
         """Handle camera to map transformation updates"""
@@ -239,25 +243,29 @@ def main(args=None):
                     dis,wx,wy = node.pix2camera_frame(center)
                     if dis is None:
                         continue
-                    print(f"dis={dis},coordinate=({wx},{wy})")
+                    # print(f"dis={dis},coordinate=({wx},{wy})")
+                    
                     if dis == 0:
                         continue
-                    if dis < 0.5:
+                    if dis < 3 and node.robot_state == "navigating":                      
+                        print("waitting reachGoal")
+                        while node.robot_state != "reachGoal":
+                            print(node.robot_state)
+                            # rclpy.spin_once(node)
+                            time.sleep(0.5)
+                        print("reached goal!")
                         idx += 1
                     else:
                         msg.rect = Int32MultiArray()
                         msg.rect.data = rect
-
                         msg.center = Int32MultiArray()
                         msg.center.data = center
                         
                         msg.frame = time.time()
-
-                        msg.depth = 3.0 #dis
+                        msg.depth = dis
                         msg.coordinate_diff = Float32MultiArray()
 
-
-                        msg.coordinate_diff.data = [3.0, 0.7]#[wx, wy]
+                        msg.coordinate_diff.data = [wx, wy]
                         
                         node.target_pub.publish(msg)
                         time.sleep(3)
