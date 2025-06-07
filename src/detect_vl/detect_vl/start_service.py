@@ -30,6 +30,9 @@ import scripts.ans2json as ans2json
 import os
 
 os.environ["QT_QPA_PLATFORM"] = "xcb"
+
+TEST_TASK = "go to the blue trash, then turn right, you will see a door, across it then turn right, pass the hallway untill find the wall in front, turn left and go outside of the building."
+TASK1 = 'go to the blue trash, turn right, and you will see a pair of door, go through it'
 from common_interface.msg import RectDepth
 class ServiceNode(Node):
     def __init__(self):
@@ -42,8 +45,8 @@ class ServiceNode(Node):
         self.rect = None
         
         self.obj_list=None
-        self.act_list=None
-
+        self.turn_list=None
+        self.relation_list=None
         self.VL = GroundingDINOInfer()
         
         self.create_subscription(CompressedImage, '/camera/camera/color/image_raw/compressed', self.rgb_callback, 30)
@@ -54,7 +57,7 @@ class ServiceNode(Node):
         self.get_logger().info("ServiceNode node started, waiting for image...")
 
         self.create_subscription(String, '/robot_state',self.robot_state_update_callback, 10)
-        self.showImgTimer=self.create_timer(0.3,self.showImg)
+        self.showImgTimer=self.create_timer(1 ,self.showImg)
     def showImg(self):
         if self.rgb_image is not None:
             cv2.imshow("rgb img", self.rgb_image)
@@ -106,7 +109,7 @@ class ServiceNode(Node):
 def main(args=None):
     rclpy.init(args=args)
     node = ServiceNode()
-
+    idx = 0
     threading.Thread(target=rclpy.spin, args=(node,), daemon=True).start()
     try:
         while True:
@@ -114,26 +117,28 @@ def main(args=None):
             if node.rgb_image is None:
                 time.sleep(1)
                 continue
-            # question = input("\n enter your question(type Ctrl+C exit):\n> ").strip()
-            # if not question:
-            #     print("invalid question")
-            #     continue
-            # answer = ans2json.ans2json(lm.ask_gpt_ll(question))
-            # print(f"\n✅ GPT-4o answer: \n{answer}")
-            # node.act_list, node.obj_list = answer["actions"], answer["objects"]
-            # print(node.act_list, node.obj_list)
+            question = input("\n enter your question(type Ctrl+C exit):\n> ").strip()
+            if not question:
+                print("invalid question")
+                continue
+            answer = ans2json.ans2json(lm.ask_gpt_ll(question))
+            print(f"\n✅ GPT-4o answer: \n{answer}")
+            node.turn_list, node.obj_list,node.relation_list = answer["turn"], answer["objects"], answer["relative"]
+            print(node.turn_list, node.obj_list)
             # '''
             #         task here: 
             #         pub the goal
             #             <-
             #         detect the obj VLM <- depth img, rect 
             # '''
-            node.obj_list = ['a blue trash']
-            node.act_list = ['null']
-            idx = 0
-            while idx < len(node.act_list):
+            # node.obj_list = ['null']
+            # node.relation_list = ['null']
+            # node.turn_list = ['-90']
+            
+            while idx < len(node.turn_list):
                 obj = node.obj_list[idx]
-                act = node.act_list[idx]
+                act = node.turn_list[idx]
+                relation = node.relation_list[idx]
                 msg = RectDepth()
                 if obj and obj.lower() != "null":
                     img_detect, rect, center = node.VL.infer(node.rgb_image, node.obj_list[idx]+".")
@@ -142,8 +147,8 @@ def main(args=None):
                     if rect is None:
                         print("no object found")
                         continue
-                    cv2.imshow("VL-detect", img_detect)
-                    cv2.waitKey(1)
+                    # cv2.imshow("VL-detect", img_detect)
+                    # cv2.waitKey(1)
                     dis,wx,wy = node.pix2world(center)
                     if dis is None:
                         continue
@@ -159,7 +164,17 @@ def main(args=None):
                             time.sleep(0.5)
                         print("reached goal!")
                         idx += 1
+                        time.sleep(10)
                     else:
+                        if relation == 'near':
+                            dis = dis - 1.0
+                        elif relation =='through':
+                            dis = dis + 0.5
+                        elif relation == 'at':
+                            dis = dis
+                        # elif relation == 'toward':
+                        #     dis = 
+                        
                         msg.rect = Int32MultiArray()
                         msg.rect.data = rect
 
@@ -176,23 +191,30 @@ def main(args=None):
                         print("update target!")
                         time.sleep(3)
                 elif act and act.lower() != "null":
-                    msg.coodinate_diff = [0, 0]
-                    msg.theta = float(act)
-                    while node.robot_state != "turning":
-                        node.target_pub.publish(msg)
+                    msg.theta=float(act)
+                    print(msg.theta)
+                    msg.coordinate_diff = Float32MultiArray()
+                    msg.coordinate_diff.data = [0.0, 0.0]
+                    # msg.theta = float(act)
+                    node.target_pub.publish(msg)
+                    # while node.robot_state != "navigating":
+                    #     node.target_pub.publish(msg)
+                    #     # rclpy.spin_once(node)
+                    #     time.sleep(10)
+                    print("waiting turning")
+                    time.sleep(5)            
+                    while node.robot_state != "reachGoal":
+                        print(node.robot_state)
                         # rclpy.spin_once(node)
                         time.sleep(0.5)
-                    print("waiting turning")
-                    time.sleep(5)
-                    while node.robot_state != "reachGoal":
-                        rclpy.spin_once(node)
-                        time.sleep(0.5)
-                    idx += 1             
+                    print("reached goal!")
+                    idx += 1                             
                 else:
                     node.get_logger().warn("both null, jump over it!")
                     idx+=1
             print(idx)
             node.get_logger().info("success!")
+            break
             # rclpy.spin_once(node)
     except KeyboardInterrupt:
         print("⛔ 退出程序")
