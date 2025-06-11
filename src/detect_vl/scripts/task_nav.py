@@ -1,0 +1,2 @@
+TEST_TASK = "go to the blue trash, then turn right, you will see a door, across it then turn right, pass the hallway untill find the wall in front, turn left and go outside of the building."
+TASK1 = 'go to the blue trash, turn right, and you will see a pair of door, go through it'

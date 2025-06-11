@@ -97,8 +97,34 @@ def gpt_map_build(img):
     img.save(buffered, format="JPEG")
     base64_image = base64.b64encode(buffered.getvalue()).decode("utf-8")
     
+    input = None
+    response = openai.responses.create(
+        model = _BASED_MODEL,
+        input = [
+            {
+                "role": "user",
+                "content": [
+                    { "type": "input_text", "text": SYSTEM_PROMPT_IMG_WORD},
+                    {
+                        "type": "input_image",
+                        "image_url": f"data:image/jpeg;base64,{base64_image}",
+                    },
+                ],
+            }
+        ],
+    )
+    print(input,'\n')
+    return response.output_text
+
+"""
+def gpt_map_build(img):
+    buffered = io.BytesIO()
+    img.save(buffered, format="JPEG")
+    base64_image = base64.b64encode(buffered.getvalue()).decode("utf-8")
+    
     client = OpenAI()
-    response = client.chat.completions.create(
+    response = openai.responses.create(
+    # response = client.chat.completions.create(
         model=_BASED_MODEL,
         messages=[
             {
@@ -117,3 +143,4 @@ def gpt_map_build(img):
         ]
     )
     return response.choices[0].message.content
+"""

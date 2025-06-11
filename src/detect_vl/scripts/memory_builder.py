@@ -14,6 +14,12 @@ class MemoryBuilder:
         self._load_memory()
         self.camera_pose = None  # [x, y, yaw]
 
+        if not os.path.exists(self.memory_file):
+            # create a new file
+            with open(self.memory_file, 'w') as f:
+                pass
+                # yaml.safe_dump(memory_data, f)
+
     def _load_memory(self):
         """Load existing memory if it exists"""
         if os.path.exists(self.memory_file):
@@ -91,8 +97,8 @@ class MemoryBuilder:
         # Transform feature coordinates to map frame
         transformed_features = []
         for feature in features_with_coords:
-            if 'Coordinate relative to the world frame' in feature:
-                camera_coords = feature['Coordinate relative to the world frame']
+            if 'Coordinate relative to the camera frame' in feature:
+                camera_coords = feature['Coordinate relative to the camera frame']
                 map_coords = self._transform_to_map_frame(camera_coords)
                 feature['Coordinate relative to the world frame'] = map_coords
                 transformed_features.append(feature)
@@ -129,7 +135,8 @@ class MemoryBuilder:
         # Save to file
         try:
             with open(self.memory_file, 'w') as f:
-                yaml.dump(self.memory_data, f, default_flow_style=False)
+                safe_data = convert_numpy(self.memory_data)
+                yaml.safe_dump(safe_data, f, default_flow_style=False)
             print(f"Updated memory file with {room_type} features and edges")
         except Exception as e:
             print(f"Error saving to memory file: {e}")
@@ -164,3 +171,17 @@ class MemoryBuilder:
                 self._update_edges()
                 self.save_to_memory(room_type, node["features"], map_pose)
                 break 
+
+
+def convert_numpy(obj):
+    """from numpy to Python type"""
+    if isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif isinstance(obj, np.generic):
+        return obj.item()
+    elif isinstance(obj, dict):
+        return {k: convert_numpy(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_numpy(i) for i in obj]
+    else:
+        return obj

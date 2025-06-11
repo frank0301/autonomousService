@@ -15,7 +15,7 @@ class SemanticMapRvizPublisher(Node):
         super().__init__('semantic_map_rviz_publisher')
 
         # Path to memory.yaml (adjust if needed)
-        self.memory_file = os.path.expanduser('~/memory.yaml')
+        self.memory_file = os.path.expanduser('memory.yaml')
 
         # Publisher for MarkerArray
         self.marker_pub = self.create_publisher(MarkerArray, 'semantic_map_markers', 10)
