@@ -36,23 +36,28 @@ class MemoryBuilder:
 
     def _transform_to_map_frame(self, camera_coords: List[float]) -> List[float]:
         """Transform coordinates from camera frame to map frame using the camera pose"""
+        print(f"DEBUG: _transform_to_map_frame called with camera_coords: {camera_coords}")
+        print(f"DEBUG: Current camera_pose: {self.camera_pose}")
+        
         if self.camera_pose is None:
+            print("Warning: No camera pose available, returning camera coordinates as-is")
             return camera_coords
         
         cam_x, cam_y, cam_yaw = self.camera_pose
         diff_x, diff_y = camera_coords[0], camera_coords[1]
         
         # Apply the transformation equations
+        # camera_x (forward) becomes map_x, camera_y (left) becomes map_y
         target_x = cam_x + diff_x * math.cos(cam_yaw) - diff_y * math.sin(cam_yaw)
         target_y = cam_y + diff_x * math.sin(cam_yaw) + diff_y * math.cos(cam_yaw)
         
-        return [target_x, target_y, camera_coords[2]]  # Keep original z coordinate
+        print(f"Camera coords: ({diff_x:.3f}, {diff_y:.3f}) -> Map coords: ({target_x:.3f}, {target_y:.3f})")
+        return [target_x, target_y]  
 
     def _is_feature_unique(self, new_feature: Dict[str, Any], existing_features: List[Dict[str, Any]]) -> bool:
         """Check if a feature is unique based on its type and name"""
         for existing_feature in existing_features:
-            if (existing_feature.get('type') == new_feature.get('type') and 
-                existing_feature.get('name') == new_feature.get('name')):
+            if (existing_feature.get('object') == new_feature.get('object')):
                 return False
         return True
 
@@ -88,19 +93,28 @@ class MemoryBuilder:
     def update_camera_pose(self, x: float, y: float, yaw: float):
         """Update the camera pose in the map frame"""
         self.camera_pose = [x, y, yaw]
+        print(f"Updated camera pose: x={x:.3f}, y={y:.3f}, yaw={yaw:.3f}")
 
     def save_to_memory(self, room_type: str, features_with_coords: List[Dict[str, Any]], room_pose: List[float] = [0.0, 0.0, 0.0]):
         """Save or update room features in memory"""
-        # Transform room pose to map frame
-        map_room_pose = self._transform_to_map_frame(room_pose)
+        # Room pose should already be in map frame, don't transform it
+        map_room_pose = room_pose
         
-        # Transform feature coordinates to map frame
+        # Transform feature coordinates from camera frame to map frame
         transformed_features = []
         for feature in features_with_coords:
+            print(f"DEBUG: Processing feature: {feature}")
             if 'Coordinate relative to the camera frame' in feature:
+                print(f"DEBUG: Found camera coordinates in feature: {feature['object']}")
                 camera_coords = feature['Coordinate relative to the camera frame']
                 map_coords = self._transform_to_map_frame(camera_coords)
-                feature['Coordinate relative to the world frame'] = map_coords
+                # Create a copy of the feature with map coordinates
+                transformed_feature = feature.copy()
+                transformed_feature['Coordinate relative to the world frame'] = map_coords
+                transformed_features.append(transformed_feature)
+            else:
+                print(f"DEBUG: No camera coordinates found in feature: {feature.get('object', 'unknown')}")
+                # If no camera coordinates, keep the feature as-is
                 transformed_features.append(feature)
 
         # Filter features by distance
@@ -163,14 +177,13 @@ class MemoryBuilder:
         return connected
 
     def update_room_pose(self, room_type: str, new_pose: List[float]):
-        """Update the pose of a specific room"""
-        map_pose = self._transform_to_map_frame(new_pose)
+        """Update the pose of a specific room (pose should already be in map frame)"""
         for node in self.memory_data["nodes"]:
             if node["name"] == room_type:
-                node["pose"] = map_pose
+                node["pose"] = new_pose
                 self._update_edges()
-                self.save_to_memory(room_type, node["features"], map_pose)
-                break 
+                self.save_to_memory(room_type, node["features"], new_pose)
+                break
 
 
 def convert_numpy(obj):

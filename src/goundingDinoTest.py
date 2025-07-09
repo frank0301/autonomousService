@@ -52,6 +52,9 @@ for box, label, score in zip(boxes, labels, scores):
     text = f"{label} {score:.2f}"
     cv2.putText(image_cv, text, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
 
-cv2.imshow("Detection Result", image_cv)
-cv2.waitKey(0)
-cv2.destroyAllWindows()
+if image_cv is not None and image_cv.size != 0:
+    cv2.imshow("Detection Result", image_cv)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+else:
+    print("Warning: Empty or invalid image received. Skipping display.")

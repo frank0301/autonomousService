@@ -1,2 +1,1 @@
 std_msgs/Float32MultiArray coordinate
-float32 yaw

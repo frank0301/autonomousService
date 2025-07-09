@@ -25,13 +25,24 @@ Please output the result using the following JSON structure:
 }
 '''
 
-SYSTEM_PROMPT_IMG_WORD = '''
+BUILD_MAP_PROMPT_IMG = '''
 You are a multimodal AI assistant embedded in a mobile robot, helping it build a semantic memory map for indoor navigation.
 
 Your task is to analyze the provided image and:
 1. Identify the type of room or environment (e.g., kitchen, hallway, robotics lab, etc.)
 2. List static, non-movable objects that define the space (e.g., fridge, shelf, lab bench).
 3. Describe the visual context of the room in 1-2 short sentences, even if no static objects are detected.
+
+
+Do not classify a new room type unless the robot has passed through a door.
+
+If no door transition was detected, assume the robot is still in the same room — do not change the room_id or its associated coordinates.
+
+If a door was passed, update the current room_id and classify the new room using the image.
+
+If the image is ambiguous and lacks distinctive static features, skip classification and wait for a clearer view.
+
+Once a room_id and its coordinate have been assigned, do not reassign or update them unless a door transition is confirmed.
 
 Exclude movable items like people, bags, laptops, chairs with wheels, or bottles.
 
@@ -104,7 +115,7 @@ def gpt_map_build(img):
             {
                 "role": "user",
                 "content": [
-                    { "type": "input_text", "text": SYSTEM_PROMPT_IMG_WORD},
+                    { "type": "input_text", "text": BUILD_MAP_PROMPT_IMG},
                     {
                         "type": "input_image",
                         "image_url": f"data:image/jpeg;base64,{base64_image}",
@@ -115,32 +126,3 @@ def gpt_map_build(img):
     )
     print(input,'\n')
     return response.output_text
-
-"""
-def gpt_map_build(img):
-    buffered = io.BytesIO()
-    img.save(buffered, format="JPEG")
-    base64_image = base64.b64encode(buffered.getvalue()).decode("utf-8")
-    
-    client = OpenAI()
-    response = openai.responses.create(
-    # response = client.chat.completions.create(
-        model=_BASED_MODEL,
-        messages=[
-            {
-                "role": "system",
-                "content": SYSTEM_PROMPT_IMG_WORD
-            },
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "image_url",
-                        "image_url": f"data:image/jpeg;base64,{base64_image}"
-                    }
-                ]
-            }
-        ]
-    )
-    return response.choices[0].message.content
-"""
