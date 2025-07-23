@@ -1,16 +1,29 @@
 import yaml
-import numpy as np
-import heapq
-from typing import Dict, List, Tuple, Optional, Set
+import os
 import math
+import heapq
+from typing import Dict, List, Optional, Tuple, Set
 from dataclasses import dataclass, field
 from enum import Enum
 
+def find_workspace_root():
+    """Find the workspace root directory by looking for common workspace markers"""
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    # Look for workspace root by going up directories
+    while current_dir != os.path.dirname(current_dir):  # Stop at filesystem root
+        # Check if this looks like a workspace root
+        if (os.path.exists(os.path.join(current_dir, 'src')) and 
+            os.path.exists(os.path.join(current_dir, 'README.md'))):
+            return current_dir
+        current_dir = os.path.dirname(current_dir)
+    
+    # If we can't find workspace root, use current working directory
+    return os.getcwd()
 
 class NodeType(Enum):
     ROOM = "room"
     OBJECT = "object"
-
 
 @dataclass
 class Position:
@@ -25,7 +38,6 @@ class Position:
     def __hash__(self):
         return hash((self.x, self.y, self.theta))
 
-
 @dataclass
 class GraphNode:
     id: str
@@ -36,20 +48,19 @@ class GraphNode:
     def __hash__(self):
         return hash(self.id)
 
-
 class DStarLitePlanner:
-    """
-    D* Lite motion planning algorithm for robot navigation
-    """
+    """D* Lite path planning algorithm for topological navigation"""
     
-    def __init__(self, memory_file: str = "memory.yaml"):
-        self.memory_file = memory_file
+    def __init__(self, memory_file: Optional[str] = None):
+        if memory_file is None:
+            # Use workspace root to construct the path
+            workspace_root = find_workspace_root()
+            self.memory_file = os.path.join(workspace_root, "src", "memory.yaml")
+        else:
+            self.memory_file = memory_file
+            
         self.nodes: Dict[str, GraphNode] = {}
         self.edges: Dict[Tuple[str, str], float] = {}
-        self.rhs: Dict[str, float] = {}
-        self.g: Dict[str, float] = {}
-        self.queue: List[Tuple[float, float, str]] = []
-        self.km: float = 0.0
         self.start_node: Optional[str] = None
         self.goal_node: Optional[str] = None
         
@@ -330,7 +341,7 @@ class DStarLitePlanner:
         print("=" * 30)
 
 
-def plan_motion_to_location(start_location: str, goal_location: str, memory_file: str = "memory.yaml") -> List[str]:
+def plan_motion_to_location(start_location: str, goal_location: str, memory_file: Optional[str] = None) -> List[str]:
     """
     Main function to plan motion from start to goal location
     

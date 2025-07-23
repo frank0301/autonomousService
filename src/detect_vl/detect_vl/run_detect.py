@@ -13,6 +13,21 @@ import yaml
 from ultralytics import YOLO
 from common_interface.msg import RectDepth
 
+def find_workspace_root():
+    """Find the workspace root directory by looking for common workspace markers"""
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    # Look for workspace root by going up directories
+    while current_dir != os.path.dirname(current_dir):  # Stop at filesystem root
+        # Check if this looks like a workspace root
+        if (os.path.exists(os.path.join(current_dir, 'src')) and 
+            os.path.exists(os.path.join(current_dir, 'README.md'))):
+            return current_dir
+        current_dir = os.path.dirname(current_dir)
+    
+    # If we can't find workspace root, use current working directory
+    return os.getcwd()
+
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 SYSTEM_PROMPT_WORD = '''
@@ -87,7 +102,7 @@ class DetectVLNode(Node):
             # Ask GPT for semantic map generation
             semantic_map = self.ask_gpt4o_for_map(self.rgb_image, "Create semantic memory map")
             self.save_yaml_memory(semantic_map)
-            self.get_logger().info("📂 Semantic map saved to memory.yaml")
+            self.get_logger().info("📂 Semantic map saved to src/memory.yaml")
 
         except Exception as e:
             self.get_logger().error(f"Image processing failed: {e}")
@@ -130,7 +145,10 @@ class DetectVLNode(Node):
     def save_yaml_memory(self, yaml_text):
         try:
             data = yaml.safe_load(yaml_text)
-            with open("memory.yaml", "w") as f:
+            # Use workspace root to construct the path
+            workspace_root = find_workspace_root()
+            memory_file_path = os.path.join(workspace_root, "src", "memory.yaml")
+            with open(memory_file_path, "w") as f:
                 yaml.dump(data, f)
         except yaml.YAMLError as exc:
             self.get_logger().error(f"YAML parsing error: {exc}")

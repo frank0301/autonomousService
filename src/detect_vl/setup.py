@@ -24,7 +24,7 @@ setup(
         'console_scripts': [
             'run_detect_node = detect_vl.run_detect:main',
             'start_service = detect_vl.start_service:main',
-            'visualize_map = detect_vl.visualize_map:main',
+            'ros_visualize_map = detect_vl.ros_visualize_map:main',
         ],
     },
 )

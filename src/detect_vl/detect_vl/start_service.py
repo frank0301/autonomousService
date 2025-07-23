@@ -11,7 +11,6 @@ this node func:
 ############################
 '''
 
-
 import rclpy
 from rclpy.node import Node
 
@@ -32,7 +31,6 @@ from std_msgs.msg import Int32MultiArray, Float32MultiArray, String
 from std_srvs.srv import Trigger
 
 #import Class and functions from floder "sctipts"
-import scripts.task_nav as _task
 from scripts.service_vl import GroundingDINOInfer
 import scripts.service_lm as lm
 import scripts.ans2json as ans2json
@@ -46,6 +44,7 @@ class ServiceNode(Node):
     def __init__(self):
         super().__init__('detect_vl_node')
         self.bridge = CvBridge()
+        
         # images from the camera
         self.rgb_image = None
         self.depth_image = None       
@@ -55,28 +54,26 @@ class ServiceNode(Node):
         self.relation_list= None
         # load vlm model, it takes time
         self.VL = GroundingDINOInfer()
+        # rect attribute for object detection
+        self.rect: list[int] | None = None
 
         self.memory_builder = MemoryBuilder()
-        self.memory_file = "memory.yaml"
+        self.memory_file = "/src/memory.yaml"
         self.update_flag = 1 
         self.current_room = None
         self.room_pose = [0.0, 0.0, 0.0]  # Default pose, should be updated with actual robot pose
-        
-        # Door detection and room transition tracking
-        self.door_detected = False
-        self.last_door_detection_time = 0
-        self.door_detection_threshold = 2.0  # seconds to consider door detection valid
-        self.room_transition_detected = False
-        self.last_room_type = None
-        self.door_detection_distance_threshold = 1.0  # meters - distance to consider door "passed through"
         
         # Camera2map topic monitoring
         self.last_camera2map_time = 0
         self.camera2map_warning_threshold = 5.0  # seconds - warn if no messages for this long
         self.camera2map_warning_sent = False
         
+        # Subscribe to compressed RGB image
         self.create_subscription(CompressedImage, '/camera/camera/color/image_raw/compressed', self.rgb_callback, 10)
+        
+        # Subscribe to depth image (using standard ROS2 approach)
         self.create_subscription(Image, '/camera/camera/depth/image_rect_raw', self.depth_callback, 10)
+        
         # sub msg from the robot. (test 2 HZ - June 09)
         self.create_subscription(Camera2map, '/camera2map', self.camera2map_callback, 10)
         self.create_subscription(String, '/robot_state',self.robot_state_update_callback, 10)
@@ -92,7 +89,7 @@ class ServiceNode(Node):
         )
 
         self.update_memory_map = self.create_timer(1, self.update_map)
-        self.show_img = self.create_timer(1, self.show_rgb)
+        # self.show_img = self.create_timer(1, self.show_rgb)
         # Add door detection timer
         self.door_detection_timer = self.create_timer(0.5, self.detect_doors)
         # Add camera2map monitoring timer
@@ -100,50 +97,8 @@ class ServiceNode(Node):
 
         self.robot_state = "unknown"  # Initialize robot state
 
-    def save_to_memory(self, room_type, features_with_coords):
-        memory_data = {"nodes": []}
-        
-        # Load existing memory if it exists
-        if os.path.exists(self.memory_file):
-            with open(self.memory_file, 'r') as f:
-                try:
-                    memory_data = yaml.safe_load(f) or {"nodes": []}
-                except yaml.YAMLError:
-                    self.get_logger().error("Error reading memory file")
-                    memory_data = {"nodes": []}
-        else:
-            # create a new file
-            memory_data = {"nodes": []}
-            with open(self.memory_file, 'w') as f:
-                yaml.safe_dump(memory_data, f)
-
-
-        # Create new room node
-        new_room = {
-            "name": room_type,
-            "pose": self.room_pose,
-            "features": features_with_coords
-        }
-
-        # Check if room already exists
-        room_exists = False
-        for node in memory_data["nodes"]:
-            if node["name"] == room_type:
-                # Update existing room
-                node["features"] = features_with_coords
-                room_exists = True
-                break
-
-        if not room_exists:
-            memory_data["nodes"].append(new_room)
-
-        # Save to file
-        with open(self.memory_file, 'w') as f:
-            yaml.dump(memory_data, f, default_flow_style=False)
-            self.get_logger().info(f"Updated memory file with {room_type} features")
-
     def update_map(self):
-        self.get_logger().info(f"{self.update_flag}")
+        # self.get_logger().info(f"{self.update_flag}")  # Comment out this line
         if self.update_flag and (self.rgb_image is not None):
             self.update_flag = 0
             # Convert to PIL Image for GPT processing
@@ -162,8 +117,8 @@ class ServiceNode(Node):
                         # Use VLM to detect the object
                         img_detect, rect, center = self.VL.infer(self.rgb_image, obj_name + ".")
                         if rect is not None and center is not None:
-                            # Calculate world coordinates
-                            dis, wx, wy = self.pix2camera_frame(center)
+                            # Calculate world coordinates using memory_builder
+                            dis, wx, wy = self.memory_builder.pix2camera_frame(center, self.depth_image, self.get_logger())
                             if dis is not None and dis > 0:
                                 self.get_logger().info(f"Detected {obj_name} at distance {dis:.2f}m, camera coordinates ({wx:.2f}, {wy:.2f})")
                                 
@@ -180,28 +135,19 @@ class ServiceNode(Node):
                 # Use camera pose as room pose (if available)
                 room_pose = self.memory_builder.camera_pose if self.memory_builder.camera_pose else [0.0, 0.0, 0.0]
                 
-                if self.can_classify_new_room(proposed_room_type):
+                if self.memory_builder.can_classify_new_room(proposed_room_type, self.get_logger()):
                     # Room classification allowed, save to memory
                     self.memory_builder.save_to_memory(proposed_room_type, features_with_coords, room_pose)
                     self.get_logger().info(f"✅ Room '{proposed_room_type}' classified and saved to memory at pose {room_pose}")
                 else:
                     # Room classification blocked, but still save features to current room
-                    if self.last_room_type:
-                        self.memory_builder.save_to_memory(self.last_room_type, features_with_coords, room_pose)
-                        self.get_logger().info(f"📝 Features saved to existing room '{self.last_room_type}' (no new room classification)")
+                    if self.memory_builder.last_room_type:
+                        self.memory_builder.save_to_memory(self.memory_builder.last_room_type, features_with_coords, room_pose)
+                        self.get_logger().info(f"📝 Features saved to existing room '{self.memory_builder.last_room_type}' (no new room classification)")
                     else:
                         # If no previous room type, use a default or skip
                         self.get_logger().warn("⚠️ No room type available for feature storage")
             self.get_logger().info("updated featured in map!")
-
-
-    def show_rgb(self):
-        if self.rgb_image is not None and self.rgb_image.size != 0:
-            cv2.imshow("rgb", self.rgb_image)
-            cv2.waitKey(1)
-        else:
-            self.get_logger().warn("Empty or invalid image received. Skipping display.")
-
 
     def robot_state_update_callback(self, msg):
         self.robot_state = msg.data
@@ -233,128 +179,42 @@ class ServiceNode(Node):
             self.get_logger().error(f"图像处理失败: {e}")
 
     def depth_callback(self, msg):
+        """Handle depth image messages"""
         try:
-            # if format of 16UC1, do not use 'passthrough'
+            # Convert depth image to OpenCV format
             self.depth_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='passthrough')
 
             if self.depth_image is not None and self.depth_image.size != 0:
+                # Normalize depth for visualization (optional)
                 depth_normalized = np.zeros_like(self.depth_image)
                 cv2.normalize(self.depth_image, depth_normalized, 0, 255, cv2.NORM_MINMAX)
-                depth_normalized = np.uint8(depth_normalized)  # 转成 8位
+                depth_normalized = np.uint8(depth_normalized)
+                
+                self.get_logger().debug(f"📏 Depth image received: shape={self.depth_image.shape}, dtype={self.depth_image.dtype}")
 
         except Exception as e:
             self.get_logger().error(f"Depth image failed to transfer: {e}")
 
-    def pix2camera_frame(self, pix_xy):
-        """Convert pixel coordinates to camera frame coordinates for navigation"""
-        if self.depth_image is None:
-            self.get_logger().warn("⚠️ Depth image not yet received.")
-            return None, None, None
-
-        center_depth_mm = self.depth_image[pix_xy[1], pix_xy[0]]  # Access depth image using (row, col)
-        center_depth_m = center_depth_mm / 1000.0
-
-        self.get_logger().info(f"📏 Center depth at ({pix_xy[0]},{pix_xy[1]}): {center_depth_m:.3f} m")
-        
-        # Camera intrinsic parameters
-        cx, cy = 319.47, 247  # Principal point
-        fx, fy = 615.53, 615.53  # Focal lengths
-        
-        pix_x, pix_y = pix_xy 
-        
-        # Convert to camera frame coordinates for navigation
-        # Based on the usage in the main function, wx and wy are used for coordinate_diff
-        # wx should be the forward distance (depth)
-        # wy should be the lateral offset
-        wx = center_depth_m  # Forward distance (X-axis)
-        wy = (pix_x - cx) * center_depth_m / fx  # Lateral offset (Y-axis)
-        
-        self.get_logger().info(f"Camera frame coordinates: wx={wx:.3f}, wy={wy:.3f}")
-        return center_depth_m, wx, wy
-
     def detect_doors(self):
-        """Detect doors in the current image and track door transitions"""
-        if self.rgb_image is None:
-            return
-            
-        current_time = time.time()
-        
-        # Detect doors using VLM
-        img_detect, rect, center = self.VL.infer(self.rgb_image, "door.")
-        
-        if rect is not None and center is not None:
-            # Calculate distance to door
-            dis, wx, wy = self.pix2camera_frame(center)
-            
-            if dis is not None and dis > 0:
-                self.get_logger().info(f"🚪 Door detected at distance {dis:.2f}m")
-                
-                # Check if we're close enough to consider passing through
-                if dis < self.door_detection_distance_threshold:
-                    if not self.door_detected:
-                        self.door_detected = True
-                        self.last_door_detection_time = current_time
-                        self.get_logger().info("🚪 Door proximity detected - preparing for room transition")
-                else:
-                    # If we were previously near a door and now we're far, consider it a transition
-                    if self.door_detected and (current_time - self.last_door_detection_time) > self.door_detection_threshold:
-                        self.room_transition_detected = True
-                        self.door_detected = False
-                        self.get_logger().info("✅ Room transition detected - door passed through")
-        else:
-            # No door detected, reset door detection if enough time has passed
-            if self.door_detected and (current_time - self.last_door_detection_time) > self.door_detection_threshold:
-                self.door_detected = False
-
-    def can_classify_new_room(self, proposed_room_type):
-        """Check if we can classify a new room type based on door transition"""
-        # If this is the first room classification, allow it
-        if self.last_room_type is None:
-            self.last_room_type = proposed_room_type
-            return True
-            
-        # If the proposed room type is the same as the last one, allow it
-        if proposed_room_type == self.last_room_type:
-            return True
-            
-        # If we haven't detected a room transition, don't allow new room classification
-        if not self.room_transition_detected:
-            self.get_logger().warn(f"🚫 Cannot classify new room '{proposed_room_type}' - no door transition detected")
-            return False
-            
-        # Room transition detected, allow new classification and reset
-        self.get_logger().info(f"✅ Room transition confirmed - classifying new room: {proposed_room_type}")
-        self.last_room_type = proposed_room_type
-        self.room_transition_detected = False  # Reset for next transition
-        return True
+        """Detect doors using memory_builder"""
+        self.memory_builder.detect_doors(self.rgb_image, self.depth_image, self.VL, self.get_logger())
 
     def reset_room_transition_callback(self, request, response):
         """Callback for the reset_room_transition service"""
-        self.reset_room_transition_state()
+        self.memory_builder.reset_room_transition_state(self.get_logger())
         response.success = True
         response.message = "Room transition state reset"
         return response
 
-    def reset_room_transition_state(self):
-        """Manually reset room transition state for testing or manual override"""
-        self.room_transition_detected = True
-        self.door_detected = False
-        self.get_logger().info("🔄 Room transition state manually reset")
-
     def check_camera2map_status(self):
         """Manually check and log the current camera2map topic status"""
         status = self.get_camera2map_status()
-        self.get_logger().info(f"📊 Camera2map Status: {status}")
+        self.get_logger().info(f"�� Camera2map Status: {status}")
         return status
 
     def get_room_transition_status(self):
         """Get current room transition status for debugging"""
-        return {
-            "current_room": self.last_room_type,
-            "door_detected": self.door_detected,
-            "room_transition_detected": self.room_transition_detected,
-            "time_since_door_detection": time.time() - self.last_door_detection_time if self.door_detected else None
-        }
+        return self.memory_builder.get_room_transition_status()
 
     def get_camera2map_status(self):
         """Get current camera2map topic status for debugging"""
@@ -388,9 +248,9 @@ def main(args=None):
 
     threading.Thread(target=rclpy.spin, args=(node,), daemon=True).start()
     try:
-        while True:
-            time.sleep(1)
-        """
+        # while True:
+        #     time.sleep(1)
+
         while True:
             msg = RectDepth()          
 
@@ -427,7 +287,7 @@ def main(args=None):
                         continue
                     cv2.imshow("VL-detect", img_detect)
                     cv2.waitKey(1)
-                    dis,wx,wy = node.pix2camera_frame(center)
+                    dis,wx,wy = node.memory_builder.pix2camera_frame(center, node.depth_image, node.get_logger())
                     if dis is None:
                         continue
                     # print(f"dis={dis},coordinate=({wx},{wy})")
@@ -468,9 +328,9 @@ def main(args=None):
                     node.get_logger().warn("both null, jump over it!")
                     idx+=1
             node.get_logger().info("success!")
-    """
+
     except KeyboardInterrupt:
-        print("⛔ 退出程序")
+        print("⛔ ERROR: KeyboardInterrupt")
     finally:
         node.destroy_node()
         rclpy.shutdown()
@@ -478,5 +338,3 @@ def main(args=None):
 
 if __name__ == '__main__':
     main()
-
-

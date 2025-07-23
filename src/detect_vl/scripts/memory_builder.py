@@ -2,10 +2,12 @@ import yaml
 import os
 import math
 import numpy as np
+import time
+import cv2
 from typing import List, Dict, Any, Tuple
 
 class MemoryBuilder:
-    def __init__(self, memory_file: str = "memory.yaml"):
+    def __init__(self, memory_file: str = "src/memory.yaml"):
         self.memory_file = memory_file
         self.memory_data = {
             "nodes": [],
@@ -13,12 +15,19 @@ class MemoryBuilder:
         }
         self._load_memory()
         self.camera_pose = None  # [x, y, yaw]
+        
+        # Door detection and room transition tracking
+        self.door_detected = False
+        self.last_door_detection_time = 0
+        self.door_detection_threshold = 2.0  # seconds to consider door detection valid
+        self.room_transition_detected = False
+        self.last_room_type = None
+        self.door_detection_distance_threshold = 1.0  # meters - distance to consider door "passed through"
 
         if not os.path.exists(self.memory_file):
             # create a new file
             with open(self.memory_file, 'w') as f:
                 pass
-                # yaml.safe_dump(memory_data, f)
 
     def _load_memory(self):
         """Load existing memory if it exists"""
@@ -184,6 +193,121 @@ class MemoryBuilder:
                 self._update_edges()
                 self.save_to_memory(room_type, node["features"], new_pose)
                 break
+
+    # ===== MOVED FUNCTIONS FROM start_service.py =====
+
+    def can_classify_new_room(self, proposed_room_type: str, logger=None) -> bool:
+        """Check if we can classify a new room type based on door transition"""
+        # If this is the first room classification, allow it
+        if self.last_room_type is None:
+            self.last_room_type = proposed_room_type
+            return True
+            
+        # If the proposed room type is the same as the last one, allow it
+        if proposed_room_type == self.last_room_type:
+            return True
+            
+        # If we haven't detected a room transition, don't allow new room classification
+        if not self.room_transition_detected:
+            if logger:
+                logger.warn(f"🚫 Cannot classify new room '{proposed_room_type}' - no door transition detected")
+            return False
+            
+        # Room transition detected, allow new classification and reset
+        if logger:
+            logger.info(f"✅ Room transition confirmed - classifying new room: {proposed_room_type}")
+        self.last_room_type = proposed_room_type
+        self.room_transition_detected = False  # Reset for next transition
+        return True
+
+    def reset_room_transition_state(self, logger=None):
+        """Manually reset room transition state for testing or manual override"""
+        self.room_transition_detected = True
+        self.door_detected = False
+        if logger:
+            logger.info("🔄 Room transition state manually reset")
+
+    def get_room_transition_status(self) -> Dict[str, Any]:
+        """Get current room transition status for debugging"""
+        return {
+            "current_room": self.last_room_type,
+            "door_detected": self.door_detected,
+            "room_transition_detected": self.room_transition_detected,
+            "time_since_door_detection": time.time() - self.last_door_detection_time if self.door_detected else None
+        }
+
+    def detect_doors(self, rgb_image, depth_image, vlm_model, logger=None):
+        """Detect doors in the current image and track door transitions"""
+        if rgb_image is None:
+            return
+            
+        current_time = time.time()
+        
+        # Detect doors using VLM
+        img_detect, rect, center = vlm_model.infer(rgb_image, "door.")
+        
+        if rect is not None and center is not None:
+            # Calculate distance to door
+            dis, wx, wy = self.pix2camera_frame(center, depth_image, logger)
+            
+            if dis is not None and dis > 0:
+                if logger:
+                    logger.info(f"🚪 Door detected at distance {dis:.2f}m")
+                
+                # Check if we're close enough to consider passing through
+                if dis < self.door_detection_distance_threshold:
+                    if not self.door_detected:
+                        self.door_detected = True
+                        self.last_door_detection_time = current_time
+                        if logger:
+                            logger.info("🚪 Door proximity detected - preparing for room transition")
+                else:
+                    # If we were previously near a door and now we're far, consider it a transition
+                    if self.door_detected and (current_time - self.last_door_detection_time) > self.door_detection_threshold:
+                        self.room_transition_detected = True
+                        self.door_detected = False
+                        if logger:
+                            logger.info("✅ Room transition detected - door passed through")
+        else:
+            # No door detected, reset door detection if enough time has passed
+            if self.door_detected and (current_time - self.last_door_detection_time) > self.door_detection_threshold:
+                self.door_detected = False
+
+    def pix2camera_frame(self, pix_xy, depth_image, logger=None):
+        """Convert pixel coordinates to camera frame coordinates for navigation"""
+        if depth_image is None:
+            if logger:
+                logger.warn("⚠️ Depth image not yet received.")
+            return None, None, None
+
+        center_depth_mm = depth_image[pix_xy[1], pix_xy[0]]  # Access depth image using (row, col)
+        center_depth_m = center_depth_mm / 1000.0
+
+        if logger:
+            logger.info(f" Center depth at ({pix_xy[0]},{pix_xy[1]}): {center_depth_m:.3f} m")
+        
+        # Camera intrinsic parameters
+        cx, cy = 319.47, 247  # Principal point
+        fx, fy = 615.53, 615.53  # Focal lengths
+        
+        pix_x, pix_y = pix_xy 
+        
+        # Convert to camera frame coordinates for navigation
+        wx = center_depth_m  # Forward distance (X-axis)
+        wy = (pix_x - cx) * center_depth_m / fx  # Lateral offset (Y-axis)
+        
+        if logger:
+            logger.info(f"Camera frame coordinates: wx={wx:.3f}, wy={wy:.3f}")
+        return center_depth_m, wx, wy
+
+    def get_door_detection_status(self) -> Dict[str, Any]:
+        """Get current door detection status for debugging"""
+        return {
+            "door_detected": self.door_detected,
+            "last_door_detection_time": self.last_door_detection_time,
+            "door_detection_threshold": self.door_detection_threshold,
+            "door_detection_distance_threshold": self.door_detection_distance_threshold
+        }
 
 
 def convert_numpy(obj):

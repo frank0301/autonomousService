@@ -253,7 +253,7 @@ When contributing to this branch:
 ## 📝 Notes
 
 - **Coordinate System**: Uses standard ROS coordinate frames
-- **Memory Persistence**: Saves to `memory.yaml` in workspace root
+- **Memory Persistence**: Saves to `src/memory.yaml` in workspace
 - **Real-time Processing**: Designed for live camera feeds
 - **Error Recovery**: Graceful handling of missing data
 - **Scalability**: Supports multiple rooms and objects

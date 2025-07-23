@@ -1,0 +1,106 @@
+edges:
+- cost: 1.0
+  from: hallway
+  to: robotics lab
+- cost: 0.5
+  from: hallway
+  to: workshop
+- cost: 0.87
+  from: robotics lab
+  to: workshop
+nodes:
+- features:
+  - Coordinate relative to the camera frame:
+    - 3.461
+    - -0.48620322323851
+    Coordinate relative to the world frame:
+    - 6.968193208563317
+    - 0.3689030033701566
+    object: bucket
+  - Coordinate relative to the camera frame:
+    - 3.067
+    - -0.4308538820203729
+    Coordinate relative to the world frame:
+    - 6.5873351656177626
+    - 0.46096970532825965
+    object: trash bin
+  - Coordinate relative to the camera frame:
+    - 1.203
+    - -0.0009185742368366007
+    Coordinate relative to the world frame:
+    - 1.7088054809912956
+    - 6.761945110357517e-05
+    object: flooring
+  - Coordinate relative to the camera frame:
+    - 2.851
+    - -0.2754520007148313
+    Coordinate relative to the world frame:
+    - 2.851
+    - -0.2754520007148313
+    object: doors
+  - Coordinate relative to the camera frame:
+    - 2.652
+    - 0.07983617370396233
+    Coordinate relative to the world frame:
+    - 2.652
+    - 0.07983617370396233
+    object: basket
+  name: hallway
+  pose:
+  - 0.0
+  - 0.0
+  - 0.0
+- features:
+  - Coordinate relative to the camera frame:
+    - 1.977
+    - -0.6213997530583402
+    Coordinate relative to the world frame:
+    - 4.097611681372959
+    - 1.490150753880247
+    object: robot parts
+  - Coordinate relative to the camera frame:
+    - 2.737
+    - -0.411174743716797
+    Coordinate relative to the world frame:
+    - 4.856003709818324
+    - 1.7061046511434732
+    object: microphone stand
+  - Coordinate relative to the camera frame:
+    - 3.801
+    - -0.8241994216366386
+    Coordinate relative to the world frame:
+    - -2.287392502245322
+    - 3.5926621362483586
+    object: workbench
+  name: robotics lab
+  pose:
+  - 0.4886021614074707
+  - 0.8685550689697266
+  - 2.57915997505188
+- features:
+  - Coordinate relative to the camera frame:
+    - 3.887
+    - -0.8428474485402825
+    Coordinate relative to the world frame:
+    - 4.388504157092364
+    - -0.8394056420646082
+    object: workbench
+  - Coordinate relative to the camera frame:
+    - 3.887
+    - -0.8428474485402825
+    Coordinate relative to the world frame:
+    - 4.3867027060038675
+    - -0.8407066109875061
+    object: table
+  - Coordinate relative to the camera frame:
+    - 2.672
+    - -1.2478999236430395
+    Coordinate relative to the world frame:
+    - 3.172656124588923
+    - -1.2460625890738959
+    object: chairs
+  name: workshop
+  pose:
+  - 0.5011301636695862
+  - 0.0028518433682620525
+  - -0.00037971511483192444
