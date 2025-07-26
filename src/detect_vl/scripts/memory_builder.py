@@ -99,10 +99,11 @@ class MemoryBuilder:
                     }
                     self.memory_data["edges"].append(edge)
 
-    def update_camera_pose(self, x: float, y: float, yaw: float):
+    def update_camera_pose(self, wx: float, wy: float, yaw: float, logger=None):
         """Update the camera pose in the map frame"""
-        self.camera_pose = [x, y, yaw]
-        print(f"Updated camera pose: x={x:.3f}, y={y:.3f}, yaw={yaw:.3f}")
+        self.camera_pose = [wx, wy, yaw]
+        if logger:
+            logger.info(f"Updated camera pose: wx={wx:.3f}, wy={wy:.3f}, yaw={yaw:.3f}")
 
     def save_to_memory(self, room_type: str, features_with_coords: List[Dict[str, Any]], room_pose: List[float] = [0.0, 0.0, 0.0]):
         """Save or update room features in memory"""
@@ -287,8 +288,8 @@ class MemoryBuilder:
             logger.info(f" Center depth at ({pix_xy[0]},{pix_xy[1]}): {center_depth_m:.3f} m")
         
         # Camera intrinsic parameters
-        cx, cy = 319.47, 247  # Principal point
-        fx, fy = 615.53, 615.53  # Focal lengths
+        cx, cy = 211.73, 123.504  # Principal point
+        fx, fy = 307.767, 307.816  # Focal lengths
         
         pix_x, pix_y = pix_xy 
         

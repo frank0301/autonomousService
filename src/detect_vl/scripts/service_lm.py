@@ -5,28 +5,62 @@ import base64
 from openai import OpenAI
 openai.api_key = os.getenv("OPENAI_API_KEY")
 _BASED_MODEL = "gpt-4o-mini-2024-07-18"
-SYSTEM_PROMPT_WORD='''
-You are an advanced multimodal assistant integrated into a mobile robot. 
-I will give a cmd to the robot to reach a pleace.
-Your job is to identify static semantic landmarks from the text and extract simple motion actions.
-Only include static, non-movable objects (e.g., door, table, chair, shelf, cabinet, wall painting).
-Exclude movable objects such as people, pets, or anything that can move independently.
-Ignore the verb "go"; it is considered the default movement and not extracted as an action.
-First, extract static objects; for each object, set its corresponding action as null
-Then, extract simple movement actions (like "turn left", "turn right"); for each action, set its corresponding object as null
-The objects and actions lists must be of the same length, aligning each object or action step by step.
-For "turn" actions, describe them using angles. left use "-90", right use "90"
-If both object and action are "null" at the same step, do not include that step.
-I'm going to give you an example first: "go to the chair, then go out the door, and turn right."
-Please output the result using the following JSON structure:
+SYSTEM_PROMPT_WORD = '''
+You are an advanced multimodal assistant integrated into a mobile robot.
+I will give you a command that tells the robot how to move.
+
+Your job is to:
+1. Find all static objects (like chair, door, table, shelf, wall painting). Do not include people, pets, or things that can move.
+2. For each object, also say the spatial relation: how the robot should move around it.
+  : Use one of these: "near" (default), "at", "through", "past", "toward", or "facing"
+  : If you give an object (not "null"), you must also give a relation (not "null")
+3. Find all simple turn actions like "turn left", "turn right", or multiple turns in sequence.
+  : "turn left" means: 90
+  : "turn right" means -90
+Assign one of the following **spatial relations**:
+
+- `"near"` : default; stop close to the object
+- `"at"` : go directly to the object
+- `"through"` : pass through the object (e.g., a door or hallway)
+- `"past"` : move past or alongside the object without stopping
+- `"toward"` : move in the general direction of the object
+**If an object is not `"null"`, its relative value must NOT be `"null"`**
+
+Rules for formatting:
+- When you extract an object, its "turn" must be "null"
+- When you extract a turn, its "object" and "relative" must be "null"
+- All steps must follow the order of the original sentence
+- All lists (`objects`, `relative`, `turn`) must be the same length and step-by-step aligned
+- Do not include any step where both "object" and "turn" are "null"
+- Every turn must appear at a separate step. If a turn happens **after an object**, insert a new step for it: set "object" and "relative" to "null", and write the angle in "turn"
+
+If a sentence says something like:
+"Go to the chair, then turn left, go through the door, turn right"
+You must extract 4 steps:
+```json
 {
-    "objects": ["a chair", "a pair of door", "null"],
-    "actions": ["null", "null", "90"]
+  "objects": ["a chair", "null", "a pair of door", "null"],
+  "relative": ["near", "null", "through", "null"],
+  "turn": ["null", "90", "null", "-90"]
 }
+
+notice that, here is a wrong expamle:
+{
+  "objects": ["a chair", "a pair of door", "a hallway", "a wall", "null"],
+  "relative": ["near", "through", "past", "facing", "null"],
+  "turn": ["null", "90", "null", "null", "-90"]
+}
+it has the object and turn not null at the same time!
+OK,now start my task:
 '''
 
 BUILD_MAP_PROMPT_IMG = '''
 You are a multimodal AI assistant embedded in a mobile robot, helping it build a semantic memory map for indoor navigation.
+
+Environment Context:
+The robot is currently operating in a {context}. Use this environment context to guide your prediction of the room type. 
+For example, if the context is "supermarket", prefer classifications like "aisle", "checkout area", or "storage room". 
+If it's "hospital", expect areas like "corridor", "nurse station", or "patient room".
 
 Your task is to analyze the provided image and:
 1. Identify the type of room or environment (e.g., kitchen, hallway, robotics lab, etc.)
@@ -49,21 +83,21 @@ Exclude movable items like people, bags, laptops, chairs with wheels, or bottles
 Return your result using this strict JSON format:
 
 ```json
-{
+{{
   "room_type": "bedroom",
   "features": [
-    { "object": "bed" },
-    { "object": "wardrobe" }
+    {{ "object": "bed" }},
+    {{ "object": "wardrobe" }}
   ],
   "description": "This room has a bed and a wardrobe. It looks like a private sleeping area, likely a bedroom."
-}
+}}
 
 If no features are detected:
-{
+{{
   "room_type": "robotics lab",
   "features": [],
   "description": "I see a spacious area with robot parts, tools, and no furniture. It's likely a robotics lab."
-}
+}}
 '''
 
 
@@ -103,10 +137,16 @@ def ask_gpt_ll(question):
     # print(response.output_text)
     return response.output_text
 
-def gpt_map_build(img):
+def gpt_map_build(img, context=""):
     buffered = io.BytesIO()
     img.save(buffered, format="JPEG")
     base64_image = base64.b64encode(buffered.getvalue()).decode("utf-8")
+    
+    # Format the prompt with context
+    if context:
+        formatted_prompt = BUILD_MAP_PROMPT_IMG.format(context=context)
+    else:
+        formatted_prompt = BUILD_MAP_PROMPT_IMG.format(context="general indoor environment")
     
     input = None
     response = openai.responses.create(
@@ -115,7 +155,7 @@ def gpt_map_build(img):
             {
                 "role": "user",
                 "content": [
-                    { "type": "input_text", "text": BUILD_MAP_PROMPT_IMG},
+                    { "type": "input_text", "text": formatted_prompt},
                     {
                         "type": "input_image",
                         "image_url": f"data:image/jpeg;base64,{base64_image}",

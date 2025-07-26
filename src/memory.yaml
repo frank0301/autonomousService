@@ -1,13 +1,10 @@
 edges:
-- cost: 1.0
+- cost: 0.89
   from: hallway
-  to: robotics lab
+  to: corridor
 - cost: 0.5
-  from: hallway
-  to: workshop
-- cost: 0.87
-  from: robotics lab
-  to: workshop
+  from: workshop
+  to: indoor facility
 nodes:
 - features:
   - Coordinate relative to the camera frame:
@@ -45,11 +42,25 @@ nodes:
     - 2.652
     - 0.07983617370396233
     object: basket
+  - Coordinate relative to the camera frame:
+    - 3.321
+    - 0.0244947314039518
+    Coordinate relative to the world frame:
+    - 3.321
+    - 0.0244947314039518
+    object: door
+  - Coordinate relative to the camera frame:
+    - 1.745
+    - -0.30464231057910685
+    Coordinate relative to the world frame:
+    - 4.0816829342606935
+    - 1.3077899657352023
+    object: waste bin
   name: hallway
   pose:
-  - 0.0
-  - 0.0
-  - 0.0
+  - 2.319272518157959
+  - 1.48595130443573
+  - 0.07209090143442154
 - features:
   - Coordinate relative to the camera frame:
     - 1.977
@@ -72,11 +83,32 @@ nodes:
     - -2.287392502245322
     - 3.5926621362483586
     object: workbench
+  - Coordinate relative to the camera frame:
+    - 1.944
+    - -0.860529429922181
+    Coordinate relative to the world frame:
+    - -0.4369857134001527
+    - -4.417161874873046
+    object: chairs
+  - Coordinate relative to the camera frame:
+    - 3.801
+    - 0.4355344662323525
+    Coordinate relative to the world frame:
+    - 0.20197361265134428
+    - -6.589709136169584
+    object: staircase
+  - Coordinate relative to the camera frame:
+    - 3.759
+    - -1.2975398924504087
+    Coordinate relative to the world frame:
+    - -6.069736713239405
+    - -4.366042452639942
+    object: truss structure
   name: robotics lab
   pose:
-  - 0.4886021614074707
-  - 0.8685550689697266
-  - 2.57915997505188
+  - -5.555697441101074
+  - 0.760295033454895
+  - -0.4868014454841614
 - features:
   - Coordinate relative to the camera frame:
     - 3.887
@@ -104,3 +136,36 @@ nodes:
   - 0.5011301636695862
   - 0.0028518433682620525
   - -0.00037971511483192444
+- features: []
+  name: indoor facility
+  pose:
+  - 0.0
+  - 0.0
+  - 0.0
+- features:
+  - Coordinate relative to the camera frame:
+    - 2.827
+    - -0.9711850523285472
+    Coordinate relative to the world frame:
+    - 3.330780515738537
+    - -0.9735813880937354
+    object: trash can
+  - Coordinate relative to the camera frame:
+    - 1.352
+    - -0.2887475265379329
+    Coordinate relative to the world frame:
+    - 4.321023831116424
+    - 1.0874865581133282
+    object: door
+  - Coordinate relative to the camera frame:
+    - 3.801
+    - -0.31777198335104145
+    Coordinate relative to the world frame:
+    - 5.14865820118718
+    - -0.01292612973892876
+    object: cart
+  name: corridor
+  pose:
+  - 1.5076533555984497
+  - 1.123587727546692
+  - -0.21915127336978912
