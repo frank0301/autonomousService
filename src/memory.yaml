@@ -1,7 +1,7 @@
 edges:
-- cost: 0.89
-  from: hallway
-  to: corridor
+- cost: 0.98
+  from: robotics lab
+  to: workshop
 - cost: 0.5
   from: workshop
   to: indoor facility
@@ -56,11 +56,32 @@ nodes:
     - 4.0816829342606935
     - 1.3077899657352023
     object: waste bin
+  - Coordinate relative to the camera frame:
+    - 1.955
+    - 0.6305836883096629
+    Coordinate relative to the world frame:
+    - 1.3592821932144112
+    - 0.7061705896502122
+    object: wastebasket
+  - Coordinate relative to the camera frame:
+    - 1.653
+    - 0.5224319371472576
+    Coordinate relative to the world frame:
+    - 2.5029667558082345
+    - 1.3313980909135228
+    object: trash basket
+  - Coordinate relative to the camera frame:
+    - 1.685
+    - 0.5270706411018726
+    Coordinate relative to the world frame:
+    - 2.496780224210039
+    - 1.3519276534491529
+    object: waste basket
   name: hallway
   pose:
-  - 2.319272518157959
-  - 1.48595130443573
-  - 0.07209090143442154
+  - 1.8417984247207642
+  - -0.3045535981655121
+  - 0.8993719220161438
 - features:
   - Coordinate relative to the camera frame:
     - 1.977
@@ -104,11 +125,25 @@ nodes:
     - -6.069736713239405
     - -4.366042452639942
     object: truss structure
+  - Coordinate relative to the camera frame:
+    - 2.048
+    - -0.8499645511052191
+    Coordinate relative to the world frame:
+    - -1.8140152990914529
+    - 3.510926243508421
+    object: trash bin
+  - Coordinate relative to the camera frame:
+    - 3.054
+    - 1.4316043630408717
+    Coordinate relative to the world frame:
+    - 3.565830921318409
+    - 2.2175003748128725
+    object: fire extinguisher
   name: robotics lab
   pose:
-  - -5.555697441101074
-  - 0.760295033454895
-  - -0.4868014454841614
+  - 0.42948445677757263
+  - 0.9766386151313782
+  - -0.061606332659721375
 - features:
   - Coordinate relative to the camera frame:
     - 3.887

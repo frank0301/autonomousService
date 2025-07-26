@@ -384,6 +384,7 @@ def main(args=None):
                     idx+=1
             print(idx)
             node.get_logger().info("success!")
+            node.robot_state = "reachGoal"
             break
 
     except KeyboardInterrupt:

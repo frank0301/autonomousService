@@ -24,8 +24,8 @@ class GroundingDINOInfer:
         results = self.processor.post_process_grounded_object_detection(
             outputs,
             inputs.input_ids,
-            box_threshold = 0.4,
-            text_threshold = 0.3,
+            box_threshold = 0.6,
+            text_threshold = 0.6,
             target_sizes=[image.size[::-1]]
         )
 
