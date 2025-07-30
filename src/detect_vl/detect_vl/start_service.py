@@ -86,8 +86,7 @@ class ServiceNode(Node):
         
         # sub msg from the robot. (test 2 HZ - June 09)
         self.create_subscription(Camera2map, '/camera2map', self.camera2map_callback, 10)
-        self.create_subscription(String, '/robot_state',self.robot_state_update_callback, 10)
-        
+            
         self.target_pub = self.create_publisher(RectDepth, 'task/rect_depth', 10)
         self.get_logger().info("ServiceNode node started, waiting for images and camera2map messages...")
         self.update_memory_map = self.create_timer(1, self.update_map)
@@ -165,10 +164,7 @@ class ServiceNode(Node):
                         self.get_logger().warn("⚠️ No room type available for feature storage")
             self.get_logger().info("updated featured in map!")
 
-    def robot_state_update_callback(self, msg):
-        self.robot_state = msg.data
-        if not self.suppress_background_activity:
-            self.get_logger().info(f"{msg.data}")
+
 
     def camera2map_callback(self, msg):
         """Handle camera to map transformation updates"""
@@ -217,27 +213,6 @@ class ServiceNode(Node):
             # Pass None logger to suppress all output
             self.memory_builder.detect_doors(self.rgb_image, self.depth_image, self.VL, None)
 
-    def get_room_transition_status(self):
-        """Get current room transition status for debugging"""
-        return self.memory_builder.get_room_transition_status()
-
-    def get_camera2map_status(self):
-        """Get current camera2map topic status"""
-        current_time = time.time()
-        time_since_last_message = current_time - self.last_camera2map_time
-        
-        if time_since_last_message > self.camera2map_warning_threshold:
-            return {
-                "status": "warning",
-                "time_since_last_message": time_since_last_message,
-                "message": f"No /camera2map messages received for {time_since_last_message:.1f} seconds"
-            }
-        else:
-            return {
-                "status": "normal",
-                "time_since_last_message": time_since_last_message,
-                "message": f"Last message received {time_since_last_message:.1f} seconds ago"
-            }
 
     def monitor_camera2map_topic(self):
         """Monitor camera2map topic and warn if no messages received"""
@@ -270,7 +245,6 @@ def main(args=None):
             if node.rgb_image is None:
                 time.sleep(1)
                 continue
-
             
            # Suppress background activity before asking for user input
             node.suppress_background_logging(True)
@@ -313,8 +287,7 @@ def main(args=None):
                     if img_detect is not None:
                         cv2.imshow("VLM Detection", img_detect)
                         cv2.waitKey(1)  # Update display
-                    
-                    # print(rect," ", center)
+
                     if rect is None:
                         print("no object found")
                         continue

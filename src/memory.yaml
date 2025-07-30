@@ -1,7 +1,4 @@
 edges:
-- cost: 0.98
-  from: robotics lab
-  to: workshop
 - cost: 0.5
   from: workshop
   to: indoor facility
@@ -139,11 +136,25 @@ nodes:
     - 3.565830921318409
     - 2.2175003748128725
     object: fire extinguisher
+  - Coordinate relative to the camera frame:
+    - 2.426
+    - 1.0032167841256536
+    Coordinate relative to the world frame:
+    - 2.794424954222518
+    - 1.6667856508035355
+    object: buckets
+  - Coordinate relative to the camera frame:
+    - 1.82
+    - -0.5219903368457308
+    Coordinate relative to the world frame:
+    - 1.5466773342430635
+    - -0.34371282259591757
+    object: laundry basket
   name: robotics lab
   pose:
-  - 0.42948445677757263
-  - 0.9766386151313782
-  - -0.061606332659721375
+  - 0.3933023512363434
+  - 1.1578197479248047
+  - -0.6364810466766357
 - features:
   - Coordinate relative to the camera frame:
     - 3.887

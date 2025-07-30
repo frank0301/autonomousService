@@ -295,20 +295,11 @@ class MemoryBuilder:
         
         # Convert to camera frame coordinates for navigation
         wx = center_depth_m  # Forward distance (X-axis)
-        wy = (pix_x - cx) * center_depth_m / fx  # Lateral offset (Y-axis)
+        wy = -(pix_x - cx) * center_depth_m / fx  # Lateral offset (Y-axis) added (- 30.7 update)
         
         if logger:
             logger.info(f"Camera frame coordinates: wx={wx:.3f}, wy={wy:.3f}")
         return center_depth_m, wx, wy
-
-    def get_door_detection_status(self) -> Dict[str, Any]:
-        """Get current door detection status for debugging"""
-        return {
-            "door_detected": self.door_detected,
-            "last_door_detection_time": self.last_door_detection_time,
-            "door_detection_threshold": self.door_detection_threshold,
-            "door_detection_distance_threshold": self.door_detection_distance_threshold
-        }
 
 
 def convert_numpy(obj):
