@@ -1,217 +1,75 @@
-edges:
-- cost: 0.5
-  from: workshop
-  to: indoor facility
+edges: []
 nodes:
 - features:
   - Coordinate relative to the camera frame:
-    - 3.461
-    - -0.48620322323851
+    - 2.0
+    - -0.42415203709299576
     Coordinate relative to the world frame:
-    - 6.968193208563317
-    - 0.3689030033701566
-    object: bucket
-  - Coordinate relative to the camera frame:
-    - 3.067
-    - -0.4308538820203729
-    Coordinate relative to the world frame:
-    - 6.5873351656177626
-    - 0.46096970532825965
+    - 6.454837994277556
+    - 0.5957249059789964
     object: trash bin
   - Coordinate relative to the camera frame:
-    - 1.203
-    - -0.0009185742368366007
+    - 3.354
+    - -1.3869699480451123
     Coordinate relative to the world frame:
-    - 1.7088054809912956
-    - 6.761945110357517e-05
-    object: flooring
+    - 8.818972886596912
+    - -1.6802022348913899
+    object: door
   - Coordinate relative to the camera frame:
-    - 2.851
-    - -0.2754520007148313
+    - 2.461
+    - 0.17375979231041655
     Coordinate relative to the world frame:
-    - 2.851
-    - -0.2754520007148313
-    object: doors
-  - Coordinate relative to the camera frame:
-    - 2.652
-    - 0.07983617370396233
-    Coordinate relative to the world frame:
-    - 2.652
-    - 0.07983617370396233
+    - 7.432923921504595
+    - 0.27816815760702773
     object: basket
   - Coordinate relative to the camera frame:
-    - 3.321
-    - 0.0244947314039518
+    - 3.718
+    - 1.0477476142666367
     Coordinate relative to the world frame:
-    - 3.321
-    - 0.0244947314039518
-    object: door
-  - Coordinate relative to the camera frame:
-    - 1.745
-    - -0.30464231057910685
-    Coordinate relative to the world frame:
-    - 4.0816829342606935
-    - 1.3077899657352023
-    object: waste bin
-  - Coordinate relative to the camera frame:
-    - 1.955
-    - 0.6305836883096629
-    Coordinate relative to the world frame:
-    - 1.3592821932144112
-    - 0.7061705896502122
-    object: wastebasket
-  - Coordinate relative to the camera frame:
-    - 1.653
-    - 0.5224319371472576
-    Coordinate relative to the world frame:
-    - 2.5029667558082345
-    - 1.3313980909135228
-    object: trash basket
-  - Coordinate relative to the camera frame:
-    - 1.685
-    - 0.5270706411018726
-    Coordinate relative to the world frame:
-    - 2.496780224210039
-    - 1.3519276534491529
-    object: waste basket
-  name: hallway
-  pose:
-  - 1.8417984247207642
-  - -0.3045535981655121
-  - 0.8993719220161438
-- features:
-  - Coordinate relative to the camera frame:
-    - 1.977
-    - -0.6213997530583402
-    Coordinate relative to the world frame:
-    - 4.097611681372959
-    - 1.490150753880247
-    object: robot parts
-  - Coordinate relative to the camera frame:
-    - 2.737
-    - -0.411174743716797
-    Coordinate relative to the world frame:
-    - 4.856003709818324
-    - 1.7061046511434732
-    object: microphone stand
-  - Coordinate relative to the camera frame:
-    - 3.801
-    - -0.8241994216366386
-    Coordinate relative to the world frame:
-    - -2.287392502245322
-    - 3.5926621362483586
-    object: workbench
-  - Coordinate relative to the camera frame:
-    - 1.944
-    - -0.860529429922181
-    Coordinate relative to the world frame:
-    - -0.4369857134001527
-    - -4.417161874873046
-    object: chairs
-  - Coordinate relative to the camera frame:
-    - 3.801
-    - 0.4355344662323525
-    Coordinate relative to the world frame:
-    - 0.20197361265134428
-    - -6.589709136169584
-    object: staircase
-  - Coordinate relative to the camera frame:
-    - 3.759
-    - -1.2975398924504087
-    Coordinate relative to the world frame:
-    - -6.069736713239405
-    - -4.366042452639942
-    object: truss structure
-  - Coordinate relative to the camera frame:
-    - 2.048
-    - -0.8499645511052191
-    Coordinate relative to the world frame:
-    - -1.8140152990914529
-    - 3.510926243508421
-    object: trash bin
-  - Coordinate relative to the camera frame:
-    - 3.054
-    - 1.4316043630408717
-    Coordinate relative to the world frame:
-    - 3.565830921318409
-    - 2.2175003748128725
+    - 8.266319905059117
+    - 4.122972189087978
     object: fire extinguisher
   - Coordinate relative to the camera frame:
-    - 2.426
-    - 1.0032167841256536
+    - 1.487
+    - -0.07377818284611416
     Coordinate relative to the world frame:
-    - 2.794424954222518
-    - 1.6667856508035355
-    object: buckets
-  - Coordinate relative to the camera frame:
-    - 1.82
-    - -0.5219903368457308
-    Coordinate relative to the world frame:
-    - 1.5466773342430635
-    - -0.34371282259591757
-    object: laundry basket
-  name: robotics lab
+    - 7.643926144521417
+    - -0.4361347334906762
+    object: trash basket
+  name: hallway
   pose:
-  - 0.3933023512363434
-  - 1.1578197479248047
-  - -0.6364810466766357
-- features:
-  - Coordinate relative to the camera frame:
-    - 3.887
-    - -0.8428474485402825
-    Coordinate relative to the world frame:
-    - 4.388504157092364
-    - -0.8394056420646082
-    object: workbench
-  - Coordinate relative to the camera frame:
-    - 3.887
-    - -0.8428474485402825
-    Coordinate relative to the world frame:
-    - 4.3867027060038675
-    - -0.8407066109875061
-    object: table
-  - Coordinate relative to the camera frame:
-    - 2.672
-    - -1.2478999236430395
-    Coordinate relative to the world frame:
-    - 3.172656124588923
-    - -1.2460625890738959
-    object: chairs
-  name: workshop
-  pose:
-  - 0.5011301636695862
-  - 0.0028518433682620525
-  - -0.00037971511483192444
+  - 8.45246696472168
+  - -0.601801335811615
+  - 1.1613112688064575
 - features: []
-  name: indoor facility
-  pose:
-  - 0.0
-  - 0.0
-  - 0.0
-- features:
-  - Coordinate relative to the camera frame:
-    - 2.827
-    - -0.9711850523285472
-    Coordinate relative to the world frame:
-    - 3.330780515738537
-    - -0.9735813880937354
-    object: trash can
-  - Coordinate relative to the camera frame:
-    - 1.352
-    - -0.2887475265379329
-    Coordinate relative to the world frame:
-    - 4.321023831116424
-    - 1.0874865581133282
-    object: door
-  - Coordinate relative to the camera frame:
-    - 3.801
-    - -0.31777198335104145
-    Coordinate relative to the world frame:
-    - 5.14865820118718
-    - -0.01292612973892876
-    object: cart
   name: corridor
   pose:
-  - 1.5076533555984497
-  - 1.123587727546692
-  - -0.21915127336978912
+  - 5.940179347991943
+  - -0.1006796807050705
+  - -0.062321990728378296
+- features:
+  - Coordinate relative to the camera frame:
+    - 3.387
+    - -0.0029713711996413998
+    Coordinate relative to the world frame:
+    - 6.5426875621688225
+    - -0.025865055951246413
+    object: bucket
+  name: storage room
+  pose:
+  - 4.410566806793213
+  - 0.23658473789691925
+  - -0.2882608473300934
+- features:
+  - Coordinate relative to the camera frame:
+    - 2.343
+    - -0.6567650527834369
+    Coordinate relative to the world frame:
+    - 9.284326024197105
+    - -1.4084842977337444
+    object: fire extinguisher
+  name: lab hallway
+  pose:
+  - 7.072765827178955
+  - -0.39359965920448303
+  - -0.1569347083568573

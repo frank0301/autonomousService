@@ -62,21 +62,25 @@ The robot is currently operating in a {context}. Use this environment context to
 For example, if the context is "supermarket", prefer classifications like "aisle", "checkout area", or "storage room". 
 If it's "hospital", expect areas like "corridor", "nurse station", or "patient room".
 
+CRITICAL: DOORS ARE THE PRIMARY INDICATORS OF ENVIRONMENTAL TRANSITIONS
+- Doors serve as the definitive boundary markers between different rooms and environments
+- A door transition indicates the robot has moved from one distinct space to another
+- Door detection is essential for accurate room classification and map building
+- Without door detection, the robot cannot reliably determine when it has entered a new environment
+
 Your task is to analyze the provided image and:
 1. Identify the type of room or environment (e.g., kitchen, hallway, robotics lab, etc.)
 2. List static, non-movable objects that define the space (e.g., fridge, shelf, lab bench).
 3. Describe the visual context of the room in 1-2 short sentences, even if no static objects are detected.
+4. Pay special attention to detecting doors, as they are crucial for environmental boundary identification.
 
-
-Do not classify a new room type unless the robot has passed through a door.
-
-If no door transition was detected, assume the robot is still in the same room — do not change the room_id or its associated coordinates.
-
-If a door was passed, update the current room_id and classify the new room using the image.
-
-If the image is ambiguous and lacks distinctive static features, skip classification and wait for a clearer view.
-
-Once a room_id and its coordinate have been assigned, do not reassign or update them unless a door transition is confirmed.
+ENVIRONMENTAL TRANSITION RULES:
+- DO NOT classify a new room type unless the robot has passed through a door
+- Doors are the ONLY reliable indicators of environmental transitions
+- If no door transition was detected, assume the robot is still in the same room — do not change the room_id or its associated coordinates
+- If a door was passed, update the current room_id and classify the new room using the image
+- If the image is ambiguous and lacks distinctive static features (especially doors), skip classification and wait for a clearer view
+- Once a room_id and its coordinate have been assigned, do not reassign or update them unless a door transition is confirmed
 
 Exclude movable items like people, bags, laptops, chairs with wheels, or bottles.
 

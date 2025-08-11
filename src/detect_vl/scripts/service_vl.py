@@ -1,8 +1,12 @@
+import warnings
 import torch
 from PIL import Image
 from transformers import AutoProcessor, AutoModelForZeroShotObjectDetection 
 import numpy as np
 import cv2
+
+# Suppress PyTorch deprecation warnings
+warnings.filterwarnings("ignore", message=".*encoder_attention_mask.*is deprecated.*", category=FutureWarning)
 
 _MODEL_ID = "IDEA-Research/grounding-dino-tiny"
 class GroundingDINOInfer:
@@ -32,7 +36,7 @@ class GroundingDINOInfer:
         image_cv = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
         # print(results)
         boxes = results[0]['boxes'].cpu().numpy()
-        labels = results[0]['labels']
+        labels = results[0]['text_labels']  # Use text_labels instead of labels to avoid FutureWarning
         scores = results[0]['scores'].cpu().numpy()
 
         rect = None

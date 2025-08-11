@@ -221,12 +221,6 @@ class MemoryBuilder:
         self.room_transition_detected = False  # Reset for next transition
         return True
 
-    def reset_room_transition_state(self, logger=None):
-        """Manually reset room transition state for testing or manual override"""
-        self.room_transition_detected = True
-        self.door_detected = False
-        if logger:
-            logger.info("🔄 Room transition state manually reset")
 
     def get_room_transition_status(self) -> Dict[str, Any]:
         """Get current room transition status for debugging"""
@@ -237,42 +231,42 @@ class MemoryBuilder:
             "time_since_door_detection": time.time() - self.last_door_detection_time if self.door_detected else None
         }
 
-    def detect_doors(self, rgb_image, depth_image, vlm_model, logger=None):
-        """Detect doors in the current image and track door transitions"""
-        if rgb_image is None:
-            return
+    # def detect_doors(self, rgb_image, depth_image, vlm_model, logger=None):
+    #     """Detect doors in the current image and track door transitions"""
+    #     if rgb_image is None:
+    #         return
             
-        current_time = time.time()
+    #     current_time = time.time()
         
-        # Detect doors using VLM
-        img_detect, rect, center = vlm_model.infer(rgb_image, "door.")
+    #     # Detect doors using VLM
+    #     img_detect, rect, center = vlm_model.infer(rgb_image, "door.")
         
-        if rect is not None and center is not None:
-            # Calculate distance to door
-            dis, wx, wy = self.pix2camera_frame(center, depth_image, logger)
+    #     if rect is not None and center is not None:
+    #         # Calculate distance to door
+    #         dis, wx, wy = self.pix2camera_frame(center, depth_image, logger)
             
-            if dis is not None and dis > 0:
-                if logger:
-                    logger.info(f"🚪 Door detected at distance {dis:.2f}m")
+    #         if dis is not None and dis > 0:
+    #             if logger:
+    #                 logger.info(f"🚪 Door detected at distance {dis:.2f}m")
                 
-                # Check if we're close enough to consider passing through
-                if dis < self.door_detection_distance_threshold:
-                    if not self.door_detected:
-                        self.door_detected = True
-                        self.last_door_detection_time = current_time
-                        if logger:
-                            logger.info("🚪 Door proximity detected - preparing for room transition")
-                else:
-                    # If we were previously near a door and now we're far, consider it a transition
-                    if self.door_detected and (current_time - self.last_door_detection_time) > self.door_detection_threshold:
-                        self.room_transition_detected = True
-                        self.door_detected = False
-                        if logger:
-                            logger.info("✅ Room transition detected - door passed through")
-        else:
-            # No door detected, reset door detection if enough time has passed
-            if self.door_detected and (current_time - self.last_door_detection_time) > self.door_detection_threshold:
-                self.door_detected = False
+    #             # Check if we're close enough to consider passing through
+    #             if dis < self.door_detection_distance_threshold:
+    #                 if not self.door_detected:
+    #                     self.door_detected = True
+    #                     self.last_door_detection_time = current_time
+    #                     if logger:
+    #                         logger.info("🚪 Door proximity detected - preparing for room transition")
+    #             else:
+    #                 # If we were previously near a door and now we're far, consider it a transition
+    #                 if self.door_detected and (current_time - self.last_door_detection_time) > self.door_detection_threshold:
+    #                     self.room_transition_detected = True
+    #                     self.door_detected = False
+    #                     if logger:
+    #                         logger.info("✅ Room transition detected - door passed through")
+    #     else:
+    #         # No door detected, reset door detection if enough time has passed
+    #         if self.door_detected and (current_time - self.last_door_detection_time) > self.door_detection_threshold:
+    #             self.door_detected = False
 
     def pix2camera_frame(self, pix_xy, depth_image, logger=None):
         """Convert pixel coordinates to camera frame coordinates for navigation"""
