@@ -88,16 +88,30 @@ class ServiceNode(Node):
     def _setup_subscriptions_and_publishers(self):
         """Initialize ROS2 subscriptions and publishers"""
         # Subscriptions
+        # self.create_subscription(
+        #     CompressedImage, 
+        #     '/camera/camera/color/image_raw/compressed', 
+        #     self.rgb_callback, 10
+        # )
+        # self.create_subscription(
+        #     Image, 
+        #     '/camera/camera/depth/image_rect_raw', 
+        #     self.depth_callback, 10
+        # )
+
+        #For Simulation only --------------------------------
         self.create_subscription(
-            CompressedImage, 
-            '/camera/camera/color/image_raw/compressed', 
+            Image, 
+            '/camera/camera/color/image_raw', 
             self.rgb_callback, 10
         )
         self.create_subscription(
             Image, 
-            '/camera/camera/depth/image_rect_raw', 
+            '/camera/camera/depth/image_raw', 
             self.depth_callback, 10
         )
+          #For Simulation only --------------------------------
+          
         self.create_subscription(
             Camera2map, 
             '/camera2map', 

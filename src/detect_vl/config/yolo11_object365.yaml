@@ -1,0 +1,45 @@
+# YOLOv11 Object365 Detection Configuration
+
+# Model Configuration
+model:
+  path: "https://huggingface.co/NRtred/yolo11n_object365"
+  input_size: 640
+  device: "auto"  # auto, cpu, cuda
+
+# Detection Parameters
+detection:
+  confidence_threshold: 0.3
+  nms_threshold: 0.4
+  max_detections: 100
+  classes: null  # null means detect all classes
+
+# Camera Topics
+camera_topics:
+  rgb_raw: "/camera/camera/image_raw"
+  rgb_compressed: "/camera/camera/image_raw/compressed"
+  depth_raw: "/camera/camera/depth/image_raw"
+  depth_compressed: "/camera/camera/depth/image_raw/compressed"
+  rgb_info: "/camera/camera/camera_info"
+  depth_info: "/camera/camera/depth/camera_info"
+  pointcloud: "/camera/camera/points"
+
+# Output Topics
+output_topics:
+  detections: "/detection/objects"
+  rect_depth: "/detection/rect_depth"
+  camera2map: "/detection/camera2map"
+  visualization: "/detection/visualization"
+  summary: "/detection/summary"
+
+# Processing Parameters
+processing:
+  detection_frequency: 10.0  # Hz
+  enable_visualization: true
+  enable_depth_fusion: true
+  depth_scale: 0.001  # Convert mm to meters
+
+# Logging
+logging:
+  level: "INFO"
+  enable_detection_logs: true
+  log_detection_summary: true

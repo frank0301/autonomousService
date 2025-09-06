@@ -25,6 +25,8 @@ setup(
             'run_detect_node = detect_vl.run_detect:main',
             'start_service = detect_vl.start_service:main',
             'ros_visualize_map = detect_vl.ros_visualize_map:main',
+            'yolo11_object365_detector = detect_vl.yolo11_365_object_detection:main',
+            'test_yolo11_integration = detect_vl.scripts.test_yolo11_integration:main',
         ],
     },
 )

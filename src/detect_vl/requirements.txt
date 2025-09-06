@@ -1,0 +1,23 @@
+# YOLOv11 Object365 Detection Requirements
+ultralytics>=8.0.0
+torch>=1.9.0
+torchvision>=0.10.0
+opencv-python>=4.5.0
+numpy>=1.21.0
+Pillow>=8.0.0
+scipy>=1.7.0
+
+# ROS2 Dependencies (usually installed via apt)
+# rclpy
+# sensor_msgs
+# geometry_msgs
+# vision_msgs
+# cv_bridge
+# std_msgs
+
+# Additional dependencies for point cloud processing
+sensor_msgs_py>=0.0.1
+
+# Optional: For better performance
+# torch-audio  # if using audio features
+# tensorrt  # for NVIDIA GPU acceleration
