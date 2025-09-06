@@ -55,9 +55,9 @@ class YOLOv11Object365Detector(Node):
         self.pc_lock = threading.Lock()
         
         # Detection parameters
-        self.confidence_threshold = 0.3
+        self.confidence_threshold = 0.7
         self.nms_threshold = 0.4
-        self.max_detections = 100
+        self.max_detections = 20
         
         # Debug window settings
         self.enable_debug_window = True

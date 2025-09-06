@@ -8,8 +8,8 @@ model:
 
 # Detection Parameters
 detection:
-  confidence_threshold: 0.3
-  nms_threshold: 0.4
+  confidence_threshold: 0.7
+  nms_threshold: 0.5
   max_detections: 100
   classes: null  # null means detect all classes
 
